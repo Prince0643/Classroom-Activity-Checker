@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CACHE - Classroom Activity Checker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <div class="brand">
+        <div class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 10.5L12 5l8 5.5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M9 21v-7a3 3 0 0 1 6 0v7" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="brand__text">
+          <div class="brand__title">CACHE</div>
+          <div class="brand__subtitle">Classroom Activity Checker</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar__right">
+      <div class="topbar__meta">
+        <div class="meta__org">La Consolacion University Philippines</div>
+        <div class="meta__user" id="metaUser">Not logged in</div>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="iconbtn" type="button" title="Download" aria-label="Download">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3v10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path d="M5 20h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button class="iconbtn" type="button" title="Share" aria-label="Share">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 8a3 3 0 1 0-2.83-4H12a3 3 0 0 0 0 6h.17A3 3 0 0 0 15 8Z" stroke="currentColor"
+              stroke-width="1.6" />
+            <path d="M9 13l6-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M9 11l6 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M6 15a3 3 0 1 0 2.83 4H9a3 3 0 0 0 0-6h-.17A3 3 0 0 0 6 15Z" stroke="currentColor"
+              stroke-width="1.6" />
+            <path d="M18 15a3 3 0 1 0 2.83 4H21a3 3 0 0 0 0-6h-.17A3 3 0 0 0 18 15Z" stroke="currentColor"
+              stroke-width="1.6" />
+          </svg>
+        </button>
+        <button class="iconbtn" type="button" title="Apps" aria-label="Apps">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M5 5h4v4H5V5Zm5 0h4v4h-4V5Zm5 0h4v4h-4V5ZM5 10h4v4H5v-4Zm5 0h4v4h-4v-4Zm5 0h4v4h-4v-4ZM5 15h4v4H5v-4Zm5 0h4v4h-4v-4Zm5 0h4v4h-4v-4Z"
+              fill="currentColor" />
+          </svg>
+        </button>
+
+        <button class="pill" type="button" id="btnProfessorLogin">
+          <span class="pill__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="1.6" />
+              <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </span>
+          Professor Login
+        </button>
+
+        <button class="pill pill--ghost hidden" type="button" id="btnLogout">
+          <span class="pill__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M15 12H3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M21 21V3a2 2 0 0 0-2-2h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </span>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="screen" data-screen="public">
+      <div class="panel panel--blue">
+        <div class="panel__left">
+          <div class="timebox">
+            <div class="timebox__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21a9 9 0 1 0-9-9 9 9 0 0 0 9 9Z" stroke="currentColor" stroke-width="1.6" />
+                <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div class="timebox__label">Current Time</div>
+              <div class="timebox__value" id="clock">--:--:--</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel__right">
+          <div class="datebox">
+            <div class="datebox__label">Date</div>
+            <div class="datebox__value" id="today">---</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table table--wide">
+          <div class="table__head">
+            <div>Classroom</div>
+            <div>Subject</div>
+            <div>Professor</div>
+            <div>Time</div>
+            <div>Building</div>
+            <div>Status</div>
+          </div>
+          <div class="table__body" id="publicTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen hidden" data-screen="login">
+      <div class="center">
+        <div class="auth">
+          <div class="auth__badge" aria-hidden="true">
+            <div class="badge">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 10.5L12 5l8 5.5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9Z" stroke="currentColor"
+                  stroke-width="1.6" />
+                <path d="M9 21v-7a3 3 0 0 1 6 0v7" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+            </div>
+          </div>
+          <div class="auth__title">Professor Login</div>
+          <div class="auth__subtitle">Access your dashboard</div>
+
+          <form id="loginForm" class="form">
+            <label class="field">
+              <span class="field__label">Username</span>
+              <input class="input" name="username" autocomplete="username" placeholder="Enter your username" required />
+            </label>
+            <label class="field">
+              <span class="field__label">Password</span>
+              <input class="input" type="password" name="password" autocomplete="current-password"
+                placeholder="Enter your password" required />
+            </label>
+
+            <div class="actions">
+              <button class="btn btn--light" type="button" id="btnCancelLogin">Cancel</button>
+              <button class="btn btn--dark" type="submit">Login</button>
+            </div>
+
+            <div class="demo">
+              <div class="demo__title">Demo Credentials:</div>
+              <div class="demo__row"><span>Username:</span> <code>msantos</code></div>
+              <div class="demo__row"><span>Password:</span> <code>password123</code></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen hidden" data-screen="dashboard">
+      <div class="welcome">
+        <div class="welcome__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <div class="welcome__title" id="welcomeTitle">Welcome, Prof.</div>
+          <div class="welcome__sub" id="welcomeDept">Computer Science Department</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab is-active" type="button" data-tab="schedules">
+          <span class="tab__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 4v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M17 4v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M4 9h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M6 6h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor"
+                stroke-width="1.6" />
+            </svg>
+          </span>
+          Schedule Manager
+        </button>
+        <button class="tab" type="button" data-tab="profile">
+          <span class="tab__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="1.6" />
+              <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </span>
+          My Profile
+        </button>
+      </div>
+
+      <div class="tabpanes">
+        <section class="pane" data-pane="schedules">
+          <div class="section">
+            <div class="section__head">
+              <div>
+                <div class="section__title">My Schedules</div>
+                <div class="section__sub">Manage your classroom schedules</div>
+              </div>
+              <button class="btn btn--dark btn--sm" type="button" id="btnAddSchedule">
+                <span class="btn__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <path d="M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                Add Schedule
+              </button>
+            </div>
+
+            <div class="schedule" id="scheduleList"></div>
+          </div>
+        </section>
+
+        <section class="pane hidden" data-pane="profile">
+          <div class="grid">
+            <div class="col">
+              <div class="section">
+                <div class="section__head">
+                  <div>
+                    <div class="section__title">Personal Information</div>
+                  </div>
+                </div>
+
+                <div class="info">
+                  <div class="info__row">
+                    <div class="info__item">
+                      <div class="info__label">Full Name</div>
+                      <div class="info__value" id="profName">Maria Santos</div>
+                    </div>
+                    <div class="info__item">
+                      <div class="info__label">Employee ID</div>
+                      <div class="info__value" id="profId">EMP-2018-001</div>
+                    </div>
+                  </div>
+
+                  <div class="info__row">
+                    <div class="info__item">
+                      <div class="info__label">Email</div>
+                      <div class="info__value" id="profEmail">maria.santos@lcu.edu.ph</div>
+                    </div>
+                    <div class="info__item">
+                      <div class="info__label">Department</div>
+                      <div class="info__value" id="profDept">Computer Science</div>
+                    </div>
+                  </div>
+
+                  <div class="info__row">
+                    <div class="info__item">
+                      <div class="info__label">Phone</div>
+                      <div class="info__value" id="profPhone">+63 917 123 4567</div>
+                    </div>
+                    <div class="info__item">
+                      <div class="info__label">Office</div>
+                      <div class="info__value" id="profOffice">IT Building, Room 405</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section__head">
+                  <div>
+                    <div class="section__title">Academic Details</div>
+                  </div>
+                </div>
+
+                <div class="info">
+                  <div class="info__row">
+                    <div class="info__item">
+                      <div class="info__label">Specialization</div>
+                      <div class="info__value" id="profSpec">Algorithms &amp; Data Structures</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="section">
+                <div class="section__head">
+                  <div>
+                    <div class="section__title">My QR Code</div>
+                  </div>
+                </div>
+
+                <div class="qr">
+                  <div class="qr__frame">
+                    <img id="qrImg" alt="QR Code" />
+                  </div>
+
+                  <div class="qr__actions">
+                    <button class="btn btn--dark" type="button" id="btnQrFull">
+                      <span class="btn__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 3H3v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                          <path d="M15 3h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                          <path d="M9 21H3v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                          <path d="M21 21h-6v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                      </span>
+                      View Full Size
+                    </button>
+                    <button class="btn btn--dark" type="button" id="btnQrDownload">
+                      <span class="btn__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 3v10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                          <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                          <path d="M5 20h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                      </span>
+                      Download QR Code
+                    </button>
+                  </div>
+
+                  <div class="hint">
+                    This QR Code contains your professional information and can be used for identification and
+                    attendance tracking.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="modal hidden" id="qrModal" role="dialog" aria-modal="true" aria-label="QR Code Full Size">
+      <div class="modal__backdrop" data-close="true"></div>
+      <div class="modal__panel">
+        <div class="modal__head">
+          <div class="modal__title">My QR Code</div>
+          <button class="iconbtn iconbtn--dark" type="button" data-close="true" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 6l12 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal__body">
+          <img id="qrFullImg" alt="QR Code Full" />
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div>© 2025 La Consolacion University Philippines. All rights reserved.</div>
+    <button class="help" type="button" title="Help" aria-label="Help">?</button>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
