@@ -190,11 +190,13 @@ export const setScheduleStatusAsProfessor = async (scheduleId, status) => {
 };
 
 export const tapInAsProfessor = async (scheduleId) => {
-  await update(ref(db, `schedules/${scheduleId}/live`), { tapInAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  // Use client timestamp to satisfy RTDB rules validation (tapInAt must be a number).
+  await update(ref(db, `schedules/${scheduleId}/live`), { tapInAt: Date.now(), updatedAt: serverTimestamp() });
 };
 
 export const tapOutAsProfessor = async (scheduleId) => {
-  await update(ref(db, `schedules/${scheduleId}/live`), { tapOutAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  // Use client timestamp to satisfy RTDB rules validation (tapOutAt must be a number).
+  await update(ref(db, `schedules/${scheduleId}/live`), { tapOutAt: Date.now(), updatedAt: serverTimestamp() });
 };
 
 export const submitChangeRequest = async (professorUid, scheduleId, changes, reason) => {

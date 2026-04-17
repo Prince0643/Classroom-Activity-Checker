@@ -43,6 +43,8 @@ import PendingScreen from './components/screens/PendingScreen.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
 import { CloseIcon } from './components/shared/Icons.jsx';
 import QRScannerModal from './components/shared/QRScannerModal.jsx';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app as firebaseApp } from './firebase.js';
 
 export default function App() {
   const [screen, setScreen] = useState('public');
@@ -281,34 +283,71 @@ export default function App() {
     return () => window.clearInterval(id);
   }, []);
 
-  const qrUrl = useMemo(() => makeQrUrl({ ...profile, uid: authUser?.uid }), [profile, authUser?.uid]);
+  const [qrText, setQrText] = useState('');
+  const qrUrl = useMemo(() => makeQrUrl({ qrText }), [qrText]);
 
   const metaUser = authUser ? `Logged in as ${profile?.displayName || authUser.email || authUser.uid}` : 'Not logged in';
   const welcomeTitle = authUser ? `Welcome, ${profile?.displayName || authUser.email || 'User'}` : 'Welcome';
   const welcomeDept = profile?.department ? `${profile.department} Department` : isAdmin ? 'Administration' : 'Department';
 
+  const publicTimeLogBaseUrl = useMemo(() => {
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    const region = import.meta.env.VITE_FUNCTIONS_REGION || 'us-central1';
+    if (!projectId) return '';
+    return `https://${region}-${projectId}.cloudfunctions.net/publicTimeLog`;
+  }, []);
+
+  useEffect(() => {
+    // Prefer a stored token (generated on user creation by Cloud Functions).
+    // Fallback: mint on demand when user is logged in.
+    if (!authUser || isAdmin || !profile?.approved) {
+      setQrText('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = profile?.timeLogQrToken;
+        if (!token) {
+          const fn = httpsCallable(getFunctions(firebaseApp), 'mintTimeLogQr');
+          const res = await fn({});
+          // Note: function also persists the token under users/{uid}/timeLogQrToken
+          // so the next profile refresh has it.
+          // eslint-disable-next-line no-shadow
+          const token = res?.data?.token;
+          if (!token) return;
+          const origin = window.location.origin;
+          const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(token)}&r=${encodeURIComponent(origin + '/')}`;
+          if (!cancelled) setQrText(url);
+          return;
+        }
+        if (!token) return;
+        const origin = window.location.origin;
+        const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(token)}&r=${encodeURIComponent(origin + '/')}`;
+        if (!cancelled) setQrText(url);
+      } catch {
+        // If functions aren’t deployed yet, keep QR empty (or fallback can be added later).
+        if (!cancelled) setQrText('');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, isAdmin, profile?.approved, profile?.timeLogQrToken, publicTimeLogBaseUrl]);
+
   const parseQrPayload = (raw) => {
     const s = String(raw || '').trim();
     if (!s) return null;
-    if (s.startsWith('CACHE_TIMELOG:')) {
-      const b64 = s.slice('CACHE_TIMELOG:'.length).trim();
-      try {
-        const json = decodeURIComponent(escape(atob(b64)));
-        return JSON.parse(json);
-      } catch {
-        return null;
-      }
-    }
     try {
       return JSON.parse(s);
     } catch {
-      // QR server URLs encode JSON in `data=` query param
+      // Accept URL wrappers and token-only formats.
       try {
         const url = new URL(s);
-        const timelogParam = url.searchParams.get('timelog');
-        if (timelogParam) return parseQrPayload(timelogParam);
         const dataParam = url.searchParams.get('data');
         if (dataParam) return parseQrPayload(decodeURIComponent(dataParam));
+        const t = url.searchParams.get('t');
+        if (t) return { token: t };
       } catch {
         // ignore
       }
@@ -608,70 +647,18 @@ export default function App() {
   };
 
   const handleTimeLogScan = async (raw) => {
-    if (!authUser || isAdmin) return;
     const payload = parseQrPayload(raw);
-    if (!payload) {
-      alert('Invalid QR data. Please scan your QR code from Profile.');
+    if (!payload?.token) {
+      alert('Invalid QR data.');
       return;
     }
-
-    const qrUid = String(payload.uid || '').trim();
-    if (qrUid && qrUid !== authUser.uid) {
-      alert('This QR code does not match your account.');
+    if (!publicTimeLogBaseUrl) {
+      alert('Public timelog endpoint not configured.');
       return;
     }
-
-    const myEmail = String(profile?.email || authUser.email || '').trim().toLowerCase();
-    const myId = String(profile?.employeeId || '').trim();
-    const qrEmail = String(payload.email || '').trim().toLowerCase();
-    const qrId = String(payload.id || payload.employeeId || '').trim();
-
-    if ((myEmail && qrEmail && myEmail !== qrEmail) || (myId && qrId && myId !== qrId)) {
-      alert('This QR code does not match your account.');
-      return;
-    }
-
-    const last = timeLogs && timeLogs.length ? timeLogs[0] : null;
-    const type = last?.type === 'IN' ? 'OUT' : 'IN';
-
-    setScanBusy(true);
-    try {
-      const current = findCurrentScheduleForProfessor(schedules, new Date());
-      const scheduleId = current?.id || null;
-      const scheduleDetails = current
-        ? {
-            subject: current.fixed?.subject || '',
-            classroom: current.fixed?.classroom || '',
-            building: current.fixed?.building || '',
-            day: current.fixed?.day || '',
-            timeStart: current.fixed?.timeStart || '',
-            timeEnd: current.fixed?.timeEnd || '',
-          }
-        : null;
-
-      await createTimeLog({
-        professorUid: authUser.uid,
-        professorName: profile?.fullName || profile?.displayName || authUser.email || '',
-        employeeId: profile?.employeeId || payload.id || '',
-        type,
-        qrData: String(raw || ''),
-        scheduleId,
-        scheduleDetails,
-        status: 'on_time',
-      });
-
-      if (scheduleId) {
-        if (type === 'IN') await tapInAsProfessor(scheduleId);
-        else await tapOutAsProfessor(scheduleId);
-      }
-
-      setQrScannerOpen(false);
-      if (activeTab !== 'timeLogs') setActiveTab('timeLogs');
-    } catch (e) {
-      alert(e?.message || 'Failed to record time log.');
-    } finally {
-      setScanBusy(false);
-    }
+    const origin = window.location.origin;
+    const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(payload.token)}&r=${encodeURIComponent(origin + '/')}`;
+    window.location.assign(url);
   };
 
   useEffect(() => {
@@ -703,7 +690,12 @@ export default function App() {
 
           <main className="shell">
             {screen === 'public' && (
-              <PublicScreen clock={clock} today={today} schedules={schedules} />
+              <PublicScreen
+                clock={clock}
+                today={today}
+                schedules={schedules}
+                onScanQr={() => setQrScannerOpen(true)}
+              />
             )}
 
             {screen === 'pending' && (
@@ -767,6 +759,7 @@ export default function App() {
                 onSubmitRequest={professorSubmitRequest}
                 profReqBusy={profReqBusy}
                 profile={profile}
+                qrUrl={qrUrl}
                 onViewQr={() => setQrOpen(true)}
                 onDownloadQr={downloadQr}
                 buildings={buildings}

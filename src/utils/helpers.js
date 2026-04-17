@@ -72,21 +72,7 @@ export const statusToTagClass = (status) => {
 };
 
 export const makeQrUrl = (user) => {
-  const payload = {
-    uid: user?.uid || '',
-    name: user?.fullName || 'Maria Santos',
-    id: user?.employeeId || 'EMP-2018-001',
-    dept: user?.department || 'Computer Science',
-    email: user?.email || 'maria.santos@lcu.edu.ph',
-    type: 'professor_time_card',
-  };
-  // Prefix + base64 reduces the chance that external scanners auto-treat the content as an email/URL.
-  const json = JSON.stringify(payload);
-  const b64 = btoa(unescape(encodeURIComponent(json)));
-  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
-  const timelog = `CACHE_TIMELOG:${b64}`;
-  // Use a URL wrapper so iOS Camera scans open the app directly, even without in-app camera scanning.
-  const wrapped = origin ? `${origin}/?timelog=${encodeURIComponent(timelog)}` : timelog;
-  const data = encodeURIComponent(wrapped);
+  const text = String(user?.qrText || '').trim();
+  const data = encodeURIComponent(text);
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
 };

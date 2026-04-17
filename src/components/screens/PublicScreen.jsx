@@ -2,7 +2,7 @@ import { ClockIcon } from '../shared/Icons.jsx';
 import { formatDayTimeRange } from '../../utils/helpers.js';
 import StatusTag from '../shared/StatusTag.jsx';
 
-export default function PublicScreen({ clock, today, schedules }) {
+export default function PublicScreen({ clock, today, schedules, onScanQr }) {
   return (
     <section className="screen">
       <div className="panel panel--blue">
@@ -22,6 +22,13 @@ export default function PublicScreen({ clock, today, schedules }) {
             <div className="datebox__label">Date</div>
             <div className="datebox__value">{today}</div>
           </div>
+          {typeof onScanQr === 'function' && (
+            <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn--light btn--sm" type="button" onClick={onScanQr}>
+                Scan QR (Time In/Out)
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

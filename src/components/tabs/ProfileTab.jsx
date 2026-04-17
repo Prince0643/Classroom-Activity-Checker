@@ -1,7 +1,6 @@
 import { QrIcon, DownloadIcon } from '../shared/Icons.jsx';
-import { makeQrUrl } from '../../utils/helpers.js';
 
-export default function ProfileTab({ profile, uid, onViewQr, onDownloadQr }) {
+export default function ProfileTab({ profile, qrUrl, onViewQr, onDownloadQr }) {
   const profName = profile?.fullName || profile?.displayName || 'Professor';
   const profId = profile?.employeeId || '—';
   const profEmail = profile?.email || '—';
@@ -9,8 +8,6 @@ export default function ProfileTab({ profile, uid, onViewQr, onDownloadQr }) {
   const profPhone = profile?.phone || '—';
   const profOffice = profile?.office || '—';
   const profSpec = profile?.specialization || '—';
-
-  const qrUrl = makeQrUrl({ ...profile, uid });
 
   return (
     <section className="pane">

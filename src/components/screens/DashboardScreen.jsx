@@ -52,6 +52,7 @@ export default function DashboardScreen({
   profReqBusy,
   // Profile tab props
   profile,
+  qrUrl,
   onViewQr,
   onDownloadQr,
   // Reports tab props
@@ -251,7 +252,7 @@ export default function DashboardScreen({
         {activeTab === 'profile' && (
           <ProfileTab
             profile={profile}
-            uid={authUser?.uid}
+            qrUrl={qrUrl}
             onViewQr={onViewQr}
             onDownloadQr={onDownloadQr}
           />
