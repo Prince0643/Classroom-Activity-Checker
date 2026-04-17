@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import {
   child,
   get,
@@ -15,6 +15,52 @@ import {
 import { auth, db } from './firebase.js';
 
 export const watchAuth = (cb) => onAuthStateChanged(auth, cb);
+
+export const watchTimeLogsForProfessor = (professorUid, cb) => {
+  const q = query(ref(db, 'timeLogs'), orderByChild('professorUid'));
+  return onValue(q, (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      if (v && v.professorUid === professorUid) out.push({ id: c.key, ...v });
+    });
+    out.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+    cb(out);
+  });
+};
+
+export const createTimeLog = async ({
+  professorUid,
+  professorName,
+  employeeId,
+  type,
+  qrData,
+  scheduleId = null,
+  scheduleDetails = null,
+  status = 'on_time',
+}) => {
+  const baseRef = push(ref(db, 'timeLogs'));
+  const id = baseRef.key;
+  const now = Date.now();
+  const d = new Date(now);
+  const payload = {
+    professorUid: professorUid || '',
+    professorName: professorName || '',
+    employeeId: employeeId || '',
+    scheduleId: scheduleId || null,
+    scheduleDetails: scheduleDetails || null,
+    type: type || 'IN',
+    timestamp: now,
+    date: d.toISOString().slice(0, 10),
+    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+    scannedVia: 'web_qr',
+    qrData: qrData || '',
+    status: status || 'on_time',
+    createdAt: serverTimestamp(),
+  };
+  await set(ref(db, `timeLogs/${id}`), payload);
+  return id;
+};
 
 export const loginWithEmail = async (email, password) => {
   const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -53,6 +99,17 @@ export const watchPendingProfessors = (cb) => {
     snap.forEach((c) => {
       const v = c.val();
       if (v && v.role === 'professor' && v.approved === false) out.push({ uid: c.key, ...v });
+    });
+    cb(out);
+  });
+};
+
+export const watchAllUsers = (cb) => {
+  return onValue(ref(db, 'users'), (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      if (v) out.push({ uid: c.key, ...v });
     });
     cb(out);
   });
@@ -214,4 +271,137 @@ export const setUserProfileAsAdmin = async (uid, patch) => {
 export const getUserEmailByUid = async (uid) => {
   const snap = await get(child(ref(db), `users/${uid}/email`));
   return snap.exists() ? String(snap.val() || '') : '';
+};
+
+export const createProfessorAsAdmin = async (email, password, profile) => {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const uid = cred.user.uid;
+  const payload = {
+    role: 'professor',
+    approved: true,
+    email,
+    displayName: profile.displayName || '',
+    fullName: profile.fullName || '',
+    employeeId: profile.employeeId || '',
+    department: profile.department || '',
+    phone: profile.phone || '',
+    office: profile.office || '',
+    specialization: profile.specialization || '',
+    createdAt: serverTimestamp(),
+    approvedAt: serverTimestamp(),
+  };
+  await set(ref(db, `users/${uid}`), payload);
+  return { uid, email };
+};
+
+export const signUpProfessor = async (email, password, profile) => {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const uid = cred.user.uid;
+  const payload = {
+    role: 'professor',
+    approved: false,
+    email,
+    displayName: profile.displayName || '',
+    fullName: profile.fullName || '',
+    employeeId: profile.employeeId || '',
+    department: profile.department || '',
+    phone: profile.phone || '',
+    office: profile.office || '',
+    specialization: profile.specialization || '',
+    createdAt: serverTimestamp(),
+  };
+  await set(ref(db, `users/${uid}`), payload);
+  return { uid, email };
+};
+
+// Buildings
+export const createBuilding = async (building) => {
+  const baseRef = push(ref(db, 'buildings'));
+  const id = baseRef.key;
+  const payload = {
+    name: building.name || '',
+    code: building.code || '',
+    location: building.location || '',
+    floors: building.floors || 1,
+    createdAt: serverTimestamp(),
+  };
+  await set(ref(db, `buildings/${id}`), payload);
+  return id;
+};
+
+export const watchBuildings = (cb) =>
+  onValue(ref(db, 'buildings'), (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      out.push({ id: c.key, ...v });
+    });
+    cb(out);
+  });
+
+export const deleteBuildingAsAdmin = async (buildingId) => {
+  await remove(ref(db, `buildings/${buildingId}`));
+};
+
+// Classrooms
+export const createClassroom = async (classroom) => {
+  const baseRef = push(ref(db, 'classrooms'));
+  const id = baseRef.key;
+  const payload = {
+    buildingId: classroom.buildingId || '',
+    buildingName: classroom.buildingName || '',
+    roomNumber: classroom.roomNumber || '',
+    floor: classroom.floor || 1,
+    capacity: classroom.capacity || 30,
+    facilities: classroom.facilities || '',
+    createdAt: serverTimestamp(),
+  };
+  await set(ref(db, `classrooms/${id}`), payload);
+  return id;
+};
+
+export const watchClassrooms = (cb) =>
+  onValue(ref(db, 'classrooms'), (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      out.push({ id: c.key, ...v });
+    });
+    cb(out);
+  });
+
+export const deleteClassroomAsAdmin = async (classroomId) => {
+  await remove(ref(db, `classrooms/${classroomId}`));
+};
+
+// Reports
+export const submitReport = async (reporterUid, reporterName, professorUid, professorName, issue, details) => {
+  const baseRef = push(ref(db, 'reports'));
+  const id = baseRef.key;
+  const payload = {
+    reporterUid: reporterUid || '',
+    reporterName: reporterName || 'Anonymous',
+    professorUid: professorUid || '',
+    professorName: professorName || '',
+    issue: issue || '',
+    details: details || '',
+    createdAt: serverTimestamp(),
+  };
+  await set(ref(db, `reports/${id}`), payload);
+  return id;
+};
+
+export const watchReports = (cb) =>
+  onValue(ref(db, 'reports'), (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      if (v) out.push({ id: c.key, ...v });
+    });
+    out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    cb(out);
+  });
+
+export const deleteReportAsAdmin = async (reportId) => {
+  await remove(ref(db, `reports/${reportId}`));
 };

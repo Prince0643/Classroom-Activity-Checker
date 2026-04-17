@@ -11,8 +11,8 @@
     },
 
     "users": {
+      ".read": true,
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
         ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
         "role": {
           ".write": "root.child('admins').child(auth.uid).val() === true"
@@ -24,6 +24,23 @@
           ".write": "root.child('admins').child(auth.uid).val() === true"
         }
       }
+    },
+
+    "reports": {
+      ".read": "auth != null",
+      "$rid": {
+        ".write": true
+      }
+    },
+
+    "buildings": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+
+    "classrooms": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
     },
 
     "schedules": {
@@ -70,6 +87,13 @@
         "reviewedBy": {
           ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
         }
+      }
+    },
+
+    "timeLogs": {
+      "$logId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('professorUid').val() === auth.uid)",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('professorUid').val() === auth.uid))"
       }
     }
   }
