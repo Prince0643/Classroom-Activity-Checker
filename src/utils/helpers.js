@@ -80,6 +80,9 @@ export const makeQrUrl = (user) => {
     email: user?.email || 'maria.santos@lcu.edu.ph',
     type: 'professor_time_card',
   };
-  const data = encodeURIComponent(JSON.stringify(payload));
+  // Prefix + base64 reduces the chance that external scanners auto-treat the content as an email/URL.
+  const json = JSON.stringify(payload);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  const data = encodeURIComponent(`CACHE_TIMELOG:${b64}`);
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
 };

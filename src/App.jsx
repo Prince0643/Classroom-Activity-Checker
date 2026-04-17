@@ -276,6 +276,15 @@ export default function App() {
   const parseQrPayload = (raw) => {
     const s = String(raw || '').trim();
     if (!s) return null;
+    if (s.startsWith('CACHE_TIMELOG:')) {
+      const b64 = s.slice('CACHE_TIMELOG:'.length).trim();
+      try {
+        const json = decodeURIComponent(escape(atob(b64)));
+        return JSON.parse(json);
+      } catch {
+        return null;
+      }
+    }
     try {
       return JSON.parse(s);
     } catch {
@@ -283,7 +292,7 @@ export default function App() {
       try {
         const url = new URL(s);
         const dataParam = url.searchParams.get('data');
-        if (dataParam) return JSON.parse(decodeURIComponent(dataParam));
+        if (dataParam) return parseQrPayload(decodeURIComponent(dataParam));
       } catch {
         // ignore
       }
