@@ -607,14 +607,6 @@ export default function App() {
     a.remove();
   };
 
-  if (authLoading) {
-    return (
-      <div className="shell center" style={{ height: '100vh' }}>
-        <div>Loading…</div>
-      </div>
-    );
-  }
-
   const handleTimeLogScan = async (raw) => {
     if (!authUser || isAdmin) return;
     const payload = parseQrPayload(raw);
@@ -694,106 +686,114 @@ export default function App() {
 
   return (
     <>
-      <Topbar
-        authUser={authUser}
-        profile={profile}
-        metaUser={metaUser}
-        onLogin={() => setScreen('login')}
-        onLogout={onLogout}
-        onReportClick={() => setReportModalOpen(true)}
-      />
-
-      <main className="shell">
-        {screen === 'public' && (
-          <PublicScreen clock={clock} today={today} schedules={schedules} />
-        )}
-
-        {screen === 'pending' && (
-          <PendingScreen
-            onGoToPublic={() => setScreen('public')}
-            onLogout={onLogout}
-          />
-        )}
-
-        {screen === 'login' && (
-          <LoginScreen
-            onLoginSubmit={onLoginSubmit}
-            onGoToPublic={() => setScreen('public')}
-            onGoToSignUp={() => setScreen('signup')}
-            loginBusy={loginBusy}
-            authError={authError}
-          />
-        )}
-
-        {screen === 'signup' && (
-          <SignUpScreen
-            form={signUpForm}
-            onChange={setSignUpForm}
-            onSubmit={professorSignUp}
-            onGoToLogin={() => setScreen('login')}
-            signUpBusy={signUpBusy}
-            signUpError={signUpError}
-          />
-        )}
-
-        {screen === 'dashboard' && (
-          <DashboardScreen
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isAdmin={isAdmin}
-            welcomeTitle={welcomeTitle}
-            welcomeDept={welcomeDept}
-            schedules={schedules}
-            scheduleForm={adminScheduleForm}
-            onScheduleFormChange={setAdminScheduleForm}
-            onCreateSchedule={adminCreateSchedule}
-            onDeleteSchedule={deleteScheduleAsAdmin}
-            onTapIn={tapInAsProfessor}
-            onTapOut={tapOutAsProfessor}
-            onStatusChange={setScheduleStatusAsProfessor}
-            adminCreateBusy={adminCreateBusy}
-            createProfForm={createProfForm}
-            onCreateProfFormChange={setCreateProfForm}
-            onCreateProfessor={adminCreateProfessor}
-            createProfBusy={createProfBusy}
-            createProfError={createProfError}
-            pendingProfessors={pendingProfessors}
-            allUsers={allUsers}
-            onApproveProfessor={approveProfessor}
-            changeRequests={changeRequests}
-            onApproveRequest={applyChangeRequestToScheduleAsAdmin}
-            onRejectRequest={reviewChangeRequestAsAdmin}
+      {authLoading ? (
+        <div className="shell center" style={{ height: '100vh' }}>
+          <div>Loading…</div>
+        </div>
+      ) : (
+        <>
+          <Topbar
             authUser={authUser}
-            profRequestForm={profRequestForm}
-            onProfRequestFormChange={setProfRequestForm}
-            onSubmitRequest={professorSubmitRequest}
-            profReqBusy={profReqBusy}
             profile={profile}
-            onViewQr={() => setQrOpen(true)}
-            onDownloadQr={downloadQr}
-            buildings={buildings}
-            classrooms={classrooms}
-            onCreateBuilding={adminCreateBuilding}
-            onCreateClassroom={adminCreateClassroom}
-            onDeleteBuilding={adminDeleteBuilding}
-            onDeleteClassroom={adminDeleteClassroom}
-            reports={reports}
-            onSubmitReport={handleSubmitReport}
-            onDeleteReport={handleDeleteReport}
-            reportSubmitBusy={reportSubmitBusy}
-            timeLogs={timeLogs}
-            scanBusy={scanBusy}
-            onOpenTimeLogScanner={() => setQrScannerOpen(true)}
+            metaUser={metaUser}
+            onLogin={() => setScreen('login')}
+            onLogout={onLogout}
+            onReportClick={() => setReportModalOpen(true)}
           />
-        )}
-      </main>
 
-      <QRScannerModal
-        isOpen={qrScannerOpen}
-        onClose={() => (scanBusy ? null : setQrScannerOpen(false))}
-        onScanSuccess={handleTimeLogScan}
-        scanBusy={scanBusy}
-      />
+          <main className="shell">
+            {screen === 'public' && (
+              <PublicScreen clock={clock} today={today} schedules={schedules} />
+            )}
+
+            {screen === 'pending' && (
+              <PendingScreen
+                onGoToPublic={() => setScreen('public')}
+                onLogout={onLogout}
+              />
+            )}
+
+            {screen === 'login' && (
+              <LoginScreen
+                onLoginSubmit={onLoginSubmit}
+                onGoToPublic={() => setScreen('public')}
+                onGoToSignUp={() => setScreen('signup')}
+                loginBusy={loginBusy}
+                authError={authError}
+              />
+            )}
+
+            {screen === 'signup' && (
+              <SignUpScreen
+                form={signUpForm}
+                onChange={setSignUpForm}
+                onSubmit={professorSignUp}
+                onGoToLogin={() => setScreen('login')}
+                signUpBusy={signUpBusy}
+                signUpError={signUpError}
+              />
+            )}
+
+            {screen === 'dashboard' && (
+              <DashboardScreen
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                isAdmin={isAdmin}
+                welcomeTitle={welcomeTitle}
+                welcomeDept={welcomeDept}
+                schedules={schedules}
+                scheduleForm={adminScheduleForm}
+                onScheduleFormChange={setAdminScheduleForm}
+                onCreateSchedule={adminCreateSchedule}
+                onDeleteSchedule={deleteScheduleAsAdmin}
+                onTapIn={tapInAsProfessor}
+                onTapOut={tapOutAsProfessor}
+                onStatusChange={setScheduleStatusAsProfessor}
+                adminCreateBusy={adminCreateBusy}
+                createProfForm={createProfForm}
+                onCreateProfFormChange={setCreateProfForm}
+                onCreateProfessor={adminCreateProfessor}
+                createProfBusy={createProfBusy}
+                createProfError={createProfError}
+                pendingProfessors={pendingProfessors}
+                allUsers={allUsers}
+                onApproveProfessor={approveProfessor}
+                changeRequests={changeRequests}
+                onApproveRequest={applyChangeRequestToScheduleAsAdmin}
+                onRejectRequest={reviewChangeRequestAsAdmin}
+                authUser={authUser}
+                profRequestForm={profRequestForm}
+                onProfRequestFormChange={setProfRequestForm}
+                onSubmitRequest={professorSubmitRequest}
+                profReqBusy={profReqBusy}
+                profile={profile}
+                onViewQr={() => setQrOpen(true)}
+                onDownloadQr={downloadQr}
+                buildings={buildings}
+                classrooms={classrooms}
+                onCreateBuilding={adminCreateBuilding}
+                onCreateClassroom={adminCreateClassroom}
+                onDeleteBuilding={adminDeleteBuilding}
+                onDeleteClassroom={adminDeleteClassroom}
+                reports={reports}
+                onSubmitReport={handleSubmitReport}
+                onDeleteReport={handleDeleteReport}
+                reportSubmitBusy={reportSubmitBusy}
+                timeLogs={timeLogs}
+                scanBusy={scanBusy}
+                onOpenTimeLogScanner={() => setQrScannerOpen(true)}
+              />
+            )}
+          </main>
+
+          <QRScannerModal
+            isOpen={qrScannerOpen}
+            onClose={() => (scanBusy ? null : setQrScannerOpen(false))}
+            onScanSuccess={handleTimeLogScan}
+            scanBusy={scanBusy}
+          />
+        </>
+      )}
 
       <div
         className={`modal ${qrOpen ? '' : 'hidden'}`}
