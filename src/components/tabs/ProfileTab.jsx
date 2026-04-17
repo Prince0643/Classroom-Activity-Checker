@@ -106,7 +106,7 @@ export default function ProfileTab({ profile, uid, onViewQr, onDownloadQr }) {
               </div>
 
               <div className="hint">
-                Scan this QR code in the Time Logs tab to time in/out. It is unique to your account.
+                Scan this QR code to time in/out. You can scan in-app (Time Logs tab) or use your phone camera to open CACHE and record your log.
               </div>
             </div>
           </div>

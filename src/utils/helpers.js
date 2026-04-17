@@ -83,6 +83,10 @@ export const makeQrUrl = (user) => {
   // Prefix + base64 reduces the chance that external scanners auto-treat the content as an email/URL.
   const json = JSON.stringify(payload);
   const b64 = btoa(unescape(encodeURIComponent(json)));
-  const data = encodeURIComponent(`CACHE_TIMELOG:${b64}`);
+  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  const timelog = `CACHE_TIMELOG:${b64}`;
+  // Use a URL wrapper so iOS Camera scans open the app directly, even without in-app camera scanning.
+  const wrapped = origin ? `${origin}/?timelog=${encodeURIComponent(timelog)}` : timelog;
+  const data = encodeURIComponent(wrapped);
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
 };

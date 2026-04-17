@@ -141,6 +141,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Support iOS Camera scans by wrapping QR in a URL: /?timelog=...
+    // Capture it once and stash in sessionStorage so it can be processed after login.
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const v = p.get('timelog');
+      if (!v) return;
+      window.sessionStorage.setItem('pending_timelog', v);
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
     const unsub = watchAuth(async (u) => {
       setAuthLoading(true);
       setAuthUser(u);
@@ -291,6 +305,8 @@ export default function App() {
       // QR server URLs encode JSON in `data=` query param
       try {
         const url = new URL(s);
+        const timelogParam = url.searchParams.get('timelog');
+        if (timelogParam) return parseQrPayload(timelogParam);
         const dataParam = url.searchParams.get('data');
         if (dataParam) return parseQrPayload(decodeURIComponent(dataParam));
       } catch {
@@ -665,6 +681,16 @@ export default function App() {
       setScanBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!authUser || isAdmin || !profile?.approved) return;
+    if (scanBusy) return;
+    const pending = window.sessionStorage.getItem('pending_timelog');
+    if (!pending) return;
+    window.sessionStorage.removeItem('pending_timelog');
+    handleTimeLogScan(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, isAdmin, profile?.approved]);
 
   return (
     <>
