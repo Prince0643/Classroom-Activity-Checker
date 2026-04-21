@@ -12,7 +12,14 @@ import {
   set,
   update,
 } from 'firebase/database';
-import { auth, db } from './firebase.js';
+import { auth, db, getSecondaryAuth } from './firebase.js';
+
+const makeProfessorQrText = (uid, employeeId = '') => {
+  const payload = { type: 'professor_time_card', uid };
+  const emp = String(employeeId || '').trim();
+  if (emp) payload.employeeId = emp;
+  return JSON.stringify(payload);
+};
 
 export const watchAuth = (cb) => onAuthStateChanged(auth, cb);
 
@@ -79,7 +86,19 @@ export const getIsAdmin = async (uid) => {
 export const getOrCreateProfessorProfile = async (user) => {
   const r = ref(db, `users/${user.uid}`);
   const snap = await get(r);
-  if (snap.exists()) return snap.val();
+  if (snap.exists()) {
+    const p = snap.val();
+    // Backfill QR payload for older accounts that don't have one yet.
+    if (p?.approved === true && !String(p?.qrText || '').trim()) {
+      try {
+        await update(r, { qrText: makeProfessorQrText(user.uid, p?.employeeId || ''), updatedAt: serverTimestamp() });
+        return { ...p, qrText: makeProfessorQrText(user.uid, p?.employeeId || '') };
+      } catch {
+        return p;
+      }
+    }
+    return p;
+  }
 
   const profile = {
     role: 'professor',
@@ -116,7 +135,19 @@ export const watchAllUsers = (cb) => {
 };
 
 export const approveProfessor = async (uid, approved) => {
-  await update(ref(db, `users/${uid}`), { approved: !!approved, approvedAt: serverTimestamp() });
+  const r = ref(db, `users/${uid}`);
+  const patch = { approved: !!approved, approvedAt: serverTimestamp() };
+  if (approved) {
+    try {
+      const snap = await get(r);
+      const p = snap.exists() ? snap.val() : null;
+      const existingQr = String(p?.qrText || '').trim();
+      if (!existingQr) patch.qrText = makeProfessorQrText(uid, p?.employeeId || '');
+    } catch {
+      // ignore read errors; approval still proceeds
+    }
+  }
+  await update(r, patch);
 };
 
 export const createSchedule = async (schedule) => {
@@ -276,24 +307,36 @@ export const getUserEmailByUid = async (uid) => {
 };
 
 export const createProfessorAsAdmin = async (email, password, profile) => {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  const uid = cred.user.uid;
-  const payload = {
-    role: 'professor',
-    approved: true,
-    email,
-    displayName: profile.displayName || '',
-    fullName: profile.fullName || '',
-    employeeId: profile.employeeId || '',
-    department: profile.department || '',
-    phone: profile.phone || '',
-    office: profile.office || '',
-    specialization: profile.specialization || '',
-    createdAt: serverTimestamp(),
-    approvedAt: serverTimestamp(),
-  };
-  await set(ref(db, `users/${uid}`), payload);
-  return { uid, email };
+  const secondaryAuth = getSecondaryAuth();
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const uid = cred.user.uid;
+    const qrText = makeProfessorQrText(uid, profile?.employeeId || '');
+    const payload = {
+      role: 'professor',
+      approved: true,
+      email,
+      displayName: profile.displayName || '',
+      fullName: profile.fullName || '',
+      employeeId: profile.employeeId || '',
+      department: profile.department || '',
+      phone: profile.phone || '',
+      office: profile.office || '',
+      specialization: profile.specialization || '',
+      qrText,
+      createdAt: serverTimestamp(),
+      approvedAt: serverTimestamp(),
+    };
+    await set(ref(db, `users/${uid}`), payload);
+    return { uid, email };
+  } finally {
+    // Ensure the secondary auth session doesn't linger.
+    try {
+      await signOut(secondaryAuth);
+    } catch {
+      // ignore
+    }
+  }
 };
 
 export const signUpProfessor = async (email, password, profile) => {
@@ -310,6 +353,7 @@ export const signUpProfessor = async (email, password, profile) => {
     phone: profile.phone || '',
     office: profile.office || '',
     specialization: profile.specialization || '',
+    qrText: makeProfessorQrText(uid, profile?.employeeId || ''),
     createdAt: serverTimestamp(),
   };
   await set(ref(db, `users/${uid}`), payload);

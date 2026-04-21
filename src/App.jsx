@@ -43,8 +43,6 @@ import PendingScreen from './components/screens/PendingScreen.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
 import { CloseIcon } from './components/shared/Icons.jsx';
 import QRScannerModal from './components/shared/QRScannerModal.jsx';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app as firebaseApp } from './firebase.js';
 
 export default function App() {
   const [screen, setScreen] = useState('public');
@@ -290,50 +288,13 @@ export default function App() {
   const welcomeTitle = authUser ? `Welcome, ${profile?.displayName || authUser.email || 'User'}` : 'Welcome';
   const welcomeDept = profile?.department ? `${profile.department} Department` : isAdmin ? 'Administration' : 'Department';
 
-  const publicTimeLogBaseUrl = useMemo(() => {
-    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-    const region = import.meta.env.VITE_FUNCTIONS_REGION || 'us-central1';
-    if (!projectId) return '';
-    return `https://${region}-${projectId}.cloudfunctions.net/publicTimeLog`;
-  }, []);
-
   useEffect(() => {
-    // Prefer a stored token (generated on user creation by Cloud Functions).
-    // Fallback: mint on demand when user is logged in.
     if (!authUser || isAdmin || !profile?.approved) {
       setQrText('');
       return;
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = profile?.timeLogQrToken;
-        if (!token) {
-          const fn = httpsCallable(getFunctions(firebaseApp), 'mintTimeLogQr');
-          const res = await fn({});
-          // Note: function also persists the token under users/{uid}/timeLogQrToken
-          // so the next profile refresh has it.
-          // eslint-disable-next-line no-shadow
-          const token = res?.data?.token;
-          if (!token) return;
-          const origin = window.location.origin;
-          const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(token)}&r=${encodeURIComponent(origin + '/')}`;
-          if (!cancelled) setQrText(url);
-          return;
-        }
-        if (!token) return;
-        const origin = window.location.origin;
-        const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(token)}&r=${encodeURIComponent(origin + '/')}`;
-        if (!cancelled) setQrText(url);
-      } catch {
-        // If functions aren’t deployed yet, keep QR empty (or fallback can be added later).
-        if (!cancelled) setQrText('');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser, isAdmin, profile?.approved, profile?.timeLogQrToken, publicTimeLogBaseUrl]);
+    setQrText(String(profile?.qrText || '').trim());
+  }, [authUser, isAdmin, profile?.approved, profile?.qrText]);
 
   const parseQrPayload = (raw) => {
     const s = String(raw || '').trim();
@@ -648,17 +609,51 @@ export default function App() {
 
   const handleTimeLogScan = async (raw) => {
     const payload = parseQrPayload(raw);
-    if (!payload?.token) {
+    if (!payload?.uid) {
       alert('Invalid QR data.');
       return;
     }
-    if (!publicTimeLogBaseUrl) {
-      alert('Public timelog endpoint not configured.');
+    if (!authUser || isAdmin || !profile?.approved) {
+      alert('Please log in as a professor to record a time log.');
       return;
     }
-    const origin = window.location.origin;
-    const url = `${publicTimeLogBaseUrl}?t=${encodeURIComponent(payload.token)}&r=${encodeURIComponent(origin + '/')}`;
-    window.location.assign(url);
+    if (String(payload.uid) !== String(authUser.uid)) {
+      alert('This QR code does not match the logged-in account.');
+      return;
+    }
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const last = (timeLogs || []).find((l) => String(l.date || '') === todayIso) || null;
+    const nextType = last?.type === 'IN' ? 'OUT' : 'IN';
+
+    const current = findCurrentScheduleForProfessor(schedules, new Date());
+    const scheduleId = current?.id || null;
+    const scheduleDetails = current
+      ? {
+          subject: current.fixed?.subject || '',
+          classroom: current.fixed?.classroom || '',
+          building: current.fixed?.building || '',
+          day: current.fixed?.day || '',
+          timeStart: current.fixed?.timeStart || '',
+          timeEnd: current.fixed?.timeEnd || '',
+        }
+      : null;
+
+    try {
+      await createTimeLog({
+        professorUid: authUser.uid,
+        professorName: profile?.displayName || authUser.email || '',
+        employeeId: profile?.employeeId || '',
+        type: nextType,
+        qrData: raw,
+        scheduleId,
+        scheduleDetails,
+        status: 'on_time',
+      });
+      alert(`Recorded: ${nextType}`);
+    } catch (err) {
+      alert(err?.message || 'Failed to create time log');
+    }
   };
 
   useEffect(() => {
@@ -808,7 +803,7 @@ export default function App() {
             </button>
           </div>
           <div className="modal__body">
-            <img src={qrUrl} alt="QR Code Full" />
+            {qrUrl ? <img src={qrUrl} alt="QR Code Full" /> : <div className="hint">QR code not available yet.</div>}
           </div>
         </div>
       </div>

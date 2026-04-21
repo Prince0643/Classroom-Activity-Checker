@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
@@ -17,3 +17,13 @@ const app = initializeApp(firebaseConfig);
 export { app };
 export const auth = getAuth(app);
 export const db = getDatabase(app);
+
+let secondaryAuth = null;
+export const getSecondaryAuth = () => {
+  if (secondaryAuth) return secondaryAuth;
+  // Use a secondary Firebase App so admin user creation doesn't switch sessions.
+  const existing = getApps().find((a) => a.name === 'secondary');
+  const secondaryApp = existing || initializeApp(firebaseConfig, 'secondary');
+  secondaryAuth = getAuth(secondaryApp);
+  return secondaryAuth;
+};

@@ -73,6 +73,7 @@ export const statusToTagClass = (status) => {
 
 export const makeQrUrl = (user) => {
   const text = String(user?.qrText || '').trim();
+  if (!text) return '';
   const data = encodeURIComponent(text);
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
 };

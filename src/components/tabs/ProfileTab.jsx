@@ -84,17 +84,23 @@ export default function ProfileTab({ profile, qrUrl, onViewQr, onDownloadQr }) {
 
             <div className="qr">
               <div className="qr__frame">
-                <img src={qrUrl} alt="QR Code" />
+                {qrUrl ? (
+                  <img src={qrUrl} alt="QR Code" />
+                ) : (
+                  <div className="hint" style={{ padding: 14 }}>
+                    QR code not available yet.
+                  </div>
+                )}
               </div>
 
               <div className="qr__actions">
-                <button className="btn btn--dark" type="button" onClick={onViewQr}>
+                <button className="btn btn--dark" type="button" onClick={onViewQr} disabled={!qrUrl}>
                   <span className="btn__icon" aria-hidden="true">
                     <QrIcon />
                   </span>
                   View Full Size
                 </button>
-                <button className="btn btn--dark" type="button" onClick={onDownloadQr}>
+                <button className="btn btn--dark" type="button" onClick={onDownloadQr} disabled={!qrUrl}>
                   <span className="btn__icon" aria-hidden="true">
                     <DownloadIcon />
                   </span>
