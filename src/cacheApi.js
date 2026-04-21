@@ -14,11 +14,41 @@ import {
 } from 'firebase/database';
 import { auth, db, getSecondaryAuth } from './firebase.js';
 
-const makeProfessorQrText = (uid, employeeId = '') => {
-  const payload = { type: 'professor_time_card', uid };
+const randomSecret = () => {
+  try {
+    const buf = new Uint8Array(16);
+    window.crypto.getRandomValues(buf);
+    return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+  }
+};
+
+const makeProfessorQrText = (uid, secret, employeeId = '') => {
+  const payload = { type: 'professor_time_card', uid, secret };
   const emp = String(employeeId || '').trim();
   if (emp) payload.employeeId = emp;
   return JSON.stringify(payload);
+};
+
+const ensureProfessorQrSecret = async (uid, employeeId = '') => {
+  const r = ref(db, `qrSecrets/${uid}`);
+  const snap = await get(r);
+  if (snap.exists()) {
+    const v = snap.val();
+    const secret = String(v?.secret || '').trim();
+    const qrText = String(v?.qrText || '').trim();
+    if (secret && qrText) return { secret, qrText };
+  }
+  const secret = randomSecret();
+  const qrText = makeProfessorQrText(uid, secret, employeeId);
+  await set(r, { secret, qrText, updatedAt: serverTimestamp(), createdAt: serverTimestamp() });
+  return { secret, qrText };
+};
+
+export const watchQrTextForUser = (uid, cb) => {
+  const r = ref(db, `qrSecrets/${uid}/qrText`);
+  return onValue(r, (snap) => cb(snap.exists() ? String(snap.val() || '') : ''));
 };
 
 export const watchAuth = (cb) => onAuthStateChanged(auth, cb);
@@ -42,6 +72,8 @@ export const createTimeLog = async ({
   employeeId,
   type,
   qrData,
+  qrSecret = '',
+  scannedVia = 'web_qr',
   scheduleId = null,
   scheduleDetails = null,
   status = 'on_time',
@@ -60,8 +92,9 @@ export const createTimeLog = async ({
     timestamp: now,
     date: d.toISOString().slice(0, 10),
     time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-    scannedVia: 'web_qr',
+    scannedVia: scannedVia || 'web_qr',
     qrData: qrData || '',
+    qrSecret: qrSecret || '',
     status: status || 'on_time',
     createdAt: serverTimestamp(),
   };
@@ -88,15 +121,6 @@ export const getOrCreateProfessorProfile = async (user) => {
   const snap = await get(r);
   if (snap.exists()) {
     const p = snap.val();
-    // Backfill QR payload for older accounts that don't have one yet.
-    if (p?.approved === true && !String(p?.qrText || '').trim()) {
-      try {
-        await update(r, { qrText: makeProfessorQrText(user.uid, p?.employeeId || ''), updatedAt: serverTimestamp() });
-        return { ...p, qrText: makeProfessorQrText(user.uid, p?.employeeId || '') };
-      } catch {
-        return p;
-      }
-    }
     return p;
   }
 
@@ -141,8 +165,7 @@ export const approveProfessor = async (uid, approved) => {
     try {
       const snap = await get(r);
       const p = snap.exists() ? snap.val() : null;
-      const existingQr = String(p?.qrText || '').trim();
-      if (!existingQr) patch.qrText = makeProfessorQrText(uid, p?.employeeId || '');
+      await ensureProfessorQrSecret(uid, p?.employeeId || '');
     } catch {
       // ignore read errors; approval still proceeds
     }
@@ -311,7 +334,6 @@ export const createProfessorAsAdmin = async (email, password, profile) => {
   try {
     const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
     const uid = cred.user.uid;
-    const qrText = makeProfessorQrText(uid, profile?.employeeId || '');
     const payload = {
       role: 'professor',
       approved: true,
@@ -323,11 +345,11 @@ export const createProfessorAsAdmin = async (email, password, profile) => {
       phone: profile.phone || '',
       office: profile.office || '',
       specialization: profile.specialization || '',
-      qrText,
       createdAt: serverTimestamp(),
       approvedAt: serverTimestamp(),
     };
     await set(ref(db, `users/${uid}`), payload);
+    await ensureProfessorQrSecret(uid, profile?.employeeId || '');
     return { uid, email };
   } finally {
     // Ensure the secondary auth session doesn't linger.
@@ -353,10 +375,10 @@ export const signUpProfessor = async (email, password, profile) => {
     phone: profile.phone || '',
     office: profile.office || '',
     specialization: profile.specialization || '',
-    qrText: makeProfessorQrText(uid, profile?.employeeId || ''),
     createdAt: serverTimestamp(),
   };
   await set(ref(db, `users/${uid}`), payload);
+  await ensureProfessorQrSecret(uid, profile?.employeeId || '');
   return { uid, email };
 };
 

@@ -29,6 +29,7 @@ import {
   watchChangeRequests,
   watchClassrooms,
   watchPendingProfessors,
+  watchQrTextForUser,
   watchReports,
   watchSchedulesPublic,
   watchSchedulesForProfessor,
@@ -291,10 +292,13 @@ export default function App() {
   useEffect(() => {
     if (!authUser || isAdmin || !profile?.approved) {
       setQrText('');
-      return;
+      return undefined;
     }
-    setQrText(String(profile?.qrText || '').trim());
-  }, [authUser, isAdmin, profile?.approved, profile?.qrText]);
+    const unsub = watchQrTextForUser(authUser.uid, (t) => setQrText(String(t || '').trim()));
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [authUser, isAdmin, profile?.approved]);
 
   const parseQrPayload = (raw) => {
     const s = String(raw || '').trim();
@@ -613,10 +617,38 @@ export default function App() {
       alert('Invalid QR data.');
       return;
     }
+    // Public scan (kiosk mode): allow time log writes without login using per-professor secret.
     if (!authUser || isAdmin || !profile?.approved) {
-      alert('Please log in as a professor to record a time log.');
+      if (!payload?.secret) {
+        alert('Invalid QR data.');
+        return;
+      }
+      const uid = String(payload.uid);
+      const key = `public_last_type_${uid}`;
+      const lastType = String(window.localStorage.getItem(key) || '').toUpperCase();
+      const nextType = lastType === 'IN' ? 'OUT' : 'IN';
+      try {
+        await createTimeLog({
+          professorUid: uid,
+          professorName: '',
+          employeeId: String(payload.employeeId || ''),
+          type: nextType,
+          qrData: raw,
+          qrSecret: String(payload.secret || ''),
+          scannedVia: 'public_qr',
+          scheduleId: null,
+          scheduleDetails: null,
+          status: 'on_time',
+        });
+        window.localStorage.setItem(key, nextType);
+        alert(`Recorded: ${nextType}`);
+      } catch (err) {
+        alert(err?.message || 'Failed to create time log');
+      }
       return;
     }
+
+    // Logged-in professor scan: only accept own QR.
     if (String(payload.uid) !== String(authUser.uid)) {
       alert('This QR code does not match the logged-in account.');
       return;
@@ -646,6 +678,7 @@ export default function App() {
         employeeId: profile?.employeeId || '',
         type: nextType,
         qrData: raw,
+        scannedVia: 'web_qr',
         scheduleId,
         scheduleDetails,
         status: 'on_time',
