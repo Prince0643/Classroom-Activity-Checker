@@ -1,108 +1,108 @@
 {
-  "rules": {
-    ".read": true,
-    ".write": false,
-
-    "admins": {
-      ".read": "auth != null",
-      "$uid": {
-        ".write": "false"
-      }
-    },
-
-    "users": {
+    "rules": {
       ".read": true,
-      "$uid": {
-        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
-        "role": {
-          ".write": "root.child('admins').child(auth.uid).val() === true"
-        },
-        "approved": {
-          ".write": "root.child('admins').child(auth.uid).val() === true"
-        },
-        "approvedAt": {
-          ".write": "root.child('admins').child(auth.uid).val() === true"
+      ".write": false,
+
+      "admins": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "false"
         }
-      }
-    },
+      },
 
-    "reports": {
-      ".read": "auth != null",
-      "$rid": {
-        ".write": true
-      }
-    },
-
-    "buildings": {
-      ".read": true,
-      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
-    },
-
-    "classrooms": {
-      ".read": true,
-      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
-    },
-
-    "schedules": {
-      "$sid": {
+      "users": {
         ".read": true,
-        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
-
-        "professorUid": {
-          ".validate": "newData.isString()"
-        },
-
-        "fixed": {
-          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
-        },
-
-        "live": {
-          ".read": true,
-          ".write": "auth != null && root.child('users').child(auth.uid).child('approved').val() === true && data.parent().child('professorUid').val() === auth.uid",
-
-          "status": {
-            ".validate": "newData.isString()"
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+          "role": {
+            ".write": "root.child('admins').child(auth.uid).val() === true"
           },
-          "tapInAt": {
-            ".validate": "newData.val() == null || newData.isNumber()"
+          "approved": {
+            ".write": "root.child('admins').child(auth.uid).val() === true"
           },
-          "tapOutAt": {
-            ".validate": "newData.val() == null || newData.isNumber()"
+          "approvedAt": {
+            ".write": "root.child('admins').child(auth.uid).val() === true"
           }
         }
-      }
-    },
+      },
 
-    "changeRequests": {
-      "$rid": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('professorUid').val() === auth.uid)",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('professorUid').val() === auth.uid))",
-
-        "status": {
-          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
-        },
-        "reviewedAt": {
-          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
-        },
-        "reviewedBy": {
-          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      "reports": {
+        ".read": "auth != null",
+        "$rid": {
+          ".write": true
         }
-      }
-    },
+      },
 
-    "timeLogs": {
-      "$logId": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('professorUid').val() === auth.uid)",
-        ".write": "(auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('professorUid').val() === auth.uid))) || (auth == null && !data.exists() && newData.child('professorUid').isString() && newData.child('qrSecret').isString() && newData.child('qrSecret').val() === root.child('qrSecrets').child(newData.child('professorUid').val()).child('secret').val())",
-        ".validate": "(auth != null) || (newData.child('timestamp').isNumber() && newData.child('timestamp').val() <= now + 300000 && newData.child('timestamp').val() >= now - 300000 && newData.child('type').isString() && (newData.child('type').val() === 'IN' || newData.child('type').val() === 'OUT') && newData.child('date').isString() && newData.child('time').isString() && newData.child('scannedVia').isString() && newData.child('qrData').isString())"
-      }
-    },
+      "buildings": {
+        ".read": true,
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      },
 
-    "qrSecrets": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
-        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      "classrooms": {
+        ".read": true,
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      },
+
+      "schedules": {
+        "$sid": {
+          ".read": true,
+          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+
+          "professorUid": {
+            ".validate": "newData.isString()"
+          },
+
+          "fixed": {
+            ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+          },
+
+          "live": {
+            ".read": true,
+            ".write": "auth != null && root.child('users').child(auth.uid).child('approved').val() === true && data.parent().child('professorUid').val() === auth.uid",
+
+            "status": {
+              ".validate": "newData.isString()"
+            },
+            "tapInAt": {
+              ".validate": "newData.val() == null || newData.isNumber()"
+            },
+            "tapOutAt": {
+              ".validate": "newData.val() == null || newData.isNumber()"
+            }
+          }
+        }
+      },
+
+      "changeRequests": {
+        "$rid": {
+          ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('professorUid').val() === auth.uid)",
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('professorUid').val() === auth.uid))",
+
+          "status": {
+            ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+          },
+          "reviewedAt": {
+            ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+          },
+          "reviewedBy": {
+            ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+          }
+        }
+      },
+
+      "timeLogs": {
+        "$logId": {
+          ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('professorUid').val() === auth.uid)",
+          ".write": "(auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('professorUid').val() === auth.uid))) || (auth == null && !data.exists() && newData.child('professorUid').isString() && newData.child('qrSecret').isString() && newData.child('qrSecret').val() === root.child('qrSecrets').child(newData.child('professorUid').val()).child('secret').val())",
+          ".validate": "(auth != null) || (newData.child('timestamp').isNumber() && newData.child('timestamp').val() <= now + 300000 && newData.child('timestamp').val() >= now - 300000 && newData.child('type').isString() && (newData.child('type').val() === 'IN' || newData.child('type').val() === 'OUT') && newData.child('date').isString() && newData.child('time').isString() && newData.child('scannedVia').isString() && newData.child('qrData').isString())"
+        }
+      },
+
+      "qrSecrets": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+        }
       }
     }
   }
-}

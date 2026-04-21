@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CloseIcon } from './Icons.jsx';
 
 const hasBarcodeDetector = () => typeof window !== 'undefined' && 'BarcodeDetector' in window;
+const hasJsQr = () => typeof window !== 'undefined' && typeof window.jsQR === 'function';
 
 const getPreferredConstraints = () => ({
   video: {
@@ -17,6 +18,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
   const rafRef = useRef(0);
   const streamRef = useRef(null);
   const canvasRef = useRef(null);
+  const jsQrWarnedRef = useRef(false);
   const [error, setError] = useState('');
   const [manual, setManual] = useState('');
 
@@ -57,7 +59,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
         return;
       }
 
-      if (!detector) return;
+      if (!detector && !hasJsQr()) return;
 
       const tick = async () => {
         if (!isOpen || scanBusy) return;
@@ -78,17 +80,37 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
         }
         ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
 
-        try {
-          const codes = await detector.detect(canvas);
-          if (codes && codes.length) {
-            const raw = String(codes[0]?.rawValue || '').trim();
+        if (detector) {
+          try {
+            const codes = await detector.detect(canvas);
+            if (codes && codes.length) {
+              const raw = String(codes[0]?.rawValue || '').trim();
+              if (raw) {
+                onScanSuccess(raw);
+                return;
+              }
+            }
+          } catch {
+            // ignore scan errors; keep trying
+          }
+        } else if (hasJsQr()) {
+          try {
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+            const raw = String(code?.data || '').trim();
             if (raw) {
               onScanSuccess(raw);
               return;
             }
+          } catch {
+            // ignore scan errors; keep trying
           }
-        } catch {
-          // ignore scan errors; keep trying
+        } else if (!jsQrWarnedRef.current) {
+          // Camera is available but QR decoding library isn't loaded yet.
+          jsQrWarnedRef.current = true;
+          setError('QR scanner is loading… If it stays stuck, refresh the page and allow camera permissions.');
+          // Clear the message shortly; keep the camera running.
+          window.setTimeout(() => setError(''), 2200);
         }
         rafRef.current = requestAnimationFrame(tick);
       };
@@ -127,7 +149,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
             </div>
           )}
 
-          {!hasBarcodeDetector() && (
+          {(!hasBarcodeDetector() && !hasJsQr()) && (
             <div style={{ marginTop: 12 }}>
               <div className="cellTitle">Manual QR data</div>
               <textarea
@@ -155,4 +177,3 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
     </div>
   );
 }
-
