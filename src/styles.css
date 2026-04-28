@@ -168,6 +168,8 @@ body{
 
 .table__head,.table__row{display:grid;gap:12px;align-items:center}
 .table--wide .table__head,.table--wide .table__row{grid-template-columns:1.1fr 1.6fr 1.4fr 1.2fr 1.2fr .9fr}
+.table--public .table__head,.table--public .table__row{grid-template-columns:1.1fr 1.6fr 1.4fr 1.35fr .9fr}
+.table--classrooms .table__head,.table--classrooms .table__row{grid-template-columns:1.1fr .9fr 1.2fr 1.6fr 1.15fr .9fr}
 .table__head{
   background:
     linear-gradient(180deg, rgba(18,58,122,.96) 0%, rgba(17,45,92,.96) 100%);
@@ -192,8 +194,36 @@ body{
   box-shadow:0 14px 30px rgba(2,6,23,.10);
   border-color:rgba(30,91,184,.22);
 }
+.table__row--selected{
+  border-color:rgba(30,91,184,.40);
+  box-shadow:0 16px 34px rgba(2,6,23,.14);
+  outline:3px solid rgba(37,99,235,.18);
+}
 
 .cell--muted{color:var(--muted);font-size:12px;margin-top:2px}
+
+.carousel{padding:14px 14px 8px}
+.carousel__head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+  padding:4px 6px 12px;
+}
+.carousel__titleMain{font-size:18px;font-weight:900;letter-spacing:.4px}
+.carousel__titleSub{font-size:12px;color:var(--muted);margin-top:2px}
+.carousel__nav{display:flex;align-items:center;gap:10px}
+.carousel__counter{font-size:12px;color:var(--muted);min-width:64px;text-align:center}
+
+.emptyState{
+  margin:10px 4px 14px;
+  padding:18px 16px;
+  border-radius:16px;
+  border:1px dashed rgba(15,23,42,.16);
+  background:rgba(255,255,255,.78);
+}
+.emptyState__title{font-weight:800}
+.emptyState__sub{color:var(--muted);font-size:13px;margin-top:2px}
 
 .tag{
   display:inline-flex;
@@ -414,6 +444,8 @@ body{
   .scheduleItem{grid-template-columns:1fr 1.4fr 1fr 1fr 1fr 1fr 84px}
   .topbar__meta{display:none}
   .table--wide .table__head,.table--wide .table__row{grid-template-columns:1fr 1.3fr 1.1fr 1fr 1fr .8fr}
+  .table--public .table__head,.table--public .table__row{grid-template-columns:1fr 1.2fr 1fr 1fr .8fr}
+  .table--classrooms .table__head,.table--classrooms .table__row{grid-template-columns:1fr .8fr 1fr 1.2fr 1fr .8fr}
 }
 
 @media (max-width:720px){

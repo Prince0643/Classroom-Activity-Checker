@@ -132,14 +132,34 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (e) => {
+      const t = e.target;
+      const isTypingTarget =
+        t &&
+        (t.isContentEditable ||
+          ['input', 'textarea', 'select'].includes(String(t.tagName || '').toLowerCase()));
+
       if (e.key === 'Escape') {
         setQrOpen(false);
         setReportModalOpen(false);
+        setQrScannerOpen(false);
+        return;
       }
+
+      const isP = e.key === 'p' || e.key === 'P';
+      if (!isP) return;
+      if (isTypingTarget) return;
+      if (screen !== 'public') return;
+
+      const visibleModalOpen = !!document.querySelector('.modal[role="dialog"][aria-modal="true"]:not(.hidden)');
+      if (visibleModalOpen && !qrScannerOpen) return;
+      if (scanBusy && qrScannerOpen) return;
+
+      e.preventDefault();
+      setQrScannerOpen((v) => !v);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [screen, qrScannerOpen, scanBusy]);
 
   useEffect(() => {
     // Support iOS Camera scans by wrapping QR in a URL: /?timelog=...
@@ -612,6 +632,9 @@ export default function App() {
   };
 
   const handleTimeLogScan = async (raw) => {
+    if (scanBusy) return;
+    setScanBusy(true);
+    try {
     const payload = parseQrPayload(raw);
     if (!payload?.uid) {
       alert('Invalid QR data.');
@@ -642,6 +665,7 @@ export default function App() {
         });
         window.localStorage.setItem(key, nextType);
         alert(`Recorded: ${nextType}`);
+        setQrScannerOpen(false);
       } catch (err) {
         alert(err?.message || 'Failed to create time log');
       }
@@ -684,8 +708,12 @@ export default function App() {
         status: 'on_time',
       });
       alert(`Recorded: ${nextType}`);
+      setQrScannerOpen(false);
     } catch (err) {
       alert(err?.message || 'Failed to create time log');
+    }
+    } finally {
+      setScanBusy(false);
     }
   };
 
@@ -722,6 +750,8 @@ export default function App() {
                 clock={clock}
                 today={today}
                 schedules={schedules}
+                buildings={buildings}
+                classrooms={classrooms}
                 onScanQr={() => setQrScannerOpen(true)}
               />
             )}

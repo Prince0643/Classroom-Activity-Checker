@@ -14,13 +14,35 @@ const getPreferredConstraints = () => ({
 });
 
 export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBusy }) {
+  const DEBUG = true;
   const videoRef = useRef(null);
   const rafRef = useRef(0);
   const streamRef = useRef(null);
   const canvasRef = useRef(null);
   const jsQrWarnedRef = useRef(false);
+  const didScanRef = useRef(false);
+  const lastRawRef = useRef({ raw: '', at: 0 });
+  const scanBusyRef = useRef(false);
+  const onScanSuccessRef = useRef(onScanSuccess);
+  const onCloseRef = useRef(onClose);
   const [error, setError] = useState('');
   const [manual, setManual] = useState('');
+
+  useEffect(() => {
+    scanBusyRef.current = !!scanBusy;
+    if (DEBUG) {
+      // eslint-disable-next-line no-console
+      console.log('[QRScannerModal] scanBusy', !!scanBusy);
+    }
+  }, [scanBusy]);
+
+  useEffect(() => {
+    onScanSuccessRef.current = onScanSuccess;
+  }, [onScanSuccess]);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const detector = useMemo(() => {
     if (!isOpen) return null;
@@ -36,6 +58,10 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
     if (!isOpen) return undefined;
 
     const stop = () => {
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.log('[QRScannerModal] stop()');
+      }
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
       if (streamRef.current) {
@@ -46,6 +72,10 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
 
     const start = async () => {
       setError('');
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.log('[QRScannerModal] start() detector', !!detector, 'hasJsQr', hasJsQr());
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia(getPreferredConstraints());
         streamRef.current = stream;
@@ -62,7 +92,15 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
       if (!detector && !hasJsQr()) return;
 
       const tick = async () => {
-        if (!isOpen || scanBusy) return;
+        if (!isOpen || didScanRef.current) return;
+        if (scanBusyRef.current) {
+          if (DEBUG) {
+            // eslint-disable-next-line no-console
+            console.log('[QRScannerModal] tick paused (scanBusy)');
+          }
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
         const vid = videoRef.current;
         if (!vid || vid.readyState < 2) {
           rafRef.current = requestAnimationFrame(tick);
@@ -80,15 +118,29 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
         }
         ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
 
+        const accept = (raw) => {
+          const s = String(raw || '').trim();
+          if (!s) return false;
+          const now = Date.now();
+          if (lastRawRef.current.raw === s && now - lastRawRef.current.at < 2000) return false;
+          lastRawRef.current = { raw: s, at: now };
+          didScanRef.current = true;
+          if (DEBUG) {
+            // eslint-disable-next-line no-console
+            console.log('[QRScannerModal] accept()', { len: s.length });
+          }
+          stop();
+          if (typeof onScanSuccessRef.current === 'function') onScanSuccessRef.current(s);
+          if (typeof onCloseRef.current === 'function') onCloseRef.current();
+          return true;
+        };
+
         if (detector) {
           try {
             const codes = await detector.detect(canvas);
             if (codes && codes.length) {
               const raw = String(codes[0]?.rawValue || '').trim();
-              if (raw) {
-                onScanSuccess(raw);
-                return;
-              }
+              if (accept(raw)) return;
             }
           } catch {
             // ignore scan errors; keep trying
@@ -98,10 +150,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
             const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
             const raw = String(code?.data || '').trim();
-            if (raw) {
-              onScanSuccess(raw);
-              return;
-            }
+            if (accept(raw)) return;
           } catch {
             // ignore scan errors; keep trying
           }
@@ -120,7 +169,15 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess, scanBus
 
     start();
     return () => stop();
-  }, [detector, isOpen, onScanSuccess, scanBusy]);
+  }, [detector, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      didScanRef.current = false;
+      lastRawRef.current = { raw: '', at: 0 };
+      jsQrWarnedRef.current = false;
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
