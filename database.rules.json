@@ -58,7 +58,7 @@
 
           "live": {
             ".read": true,
-            ".write": "auth != null && root.child('users').child(auth.uid).child('approved').val() === true && data.parent().child('professorUid').val() === auth.uid",
+            ".write": "(auth != null && root.child('users').child(auth.uid).child('approved').val() === true && data.parent().child('professorUid').val() === auth.uid) || (auth == null && newData.child('qrSecret').isString() && newData.child('qrSecret').val() === root.child('qrSecrets').child(data.parent().child('professorUid').val()).child('secret').val() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() <= now + 300000 && newData.child('updatedAt').val() >= now - 300000)",
 
             "status": {
               ".validate": "newData.isString()"
@@ -68,6 +68,12 @@
             },
             "tapOutAt": {
               ".validate": "newData.val() == null || newData.isNumber()"
+            },
+            "updatedAt": {
+              ".validate": "newData.val() == null || newData.isNumber()"
+            },
+            "qrSecret": {
+              ".validate": "newData.val() == null || newData.isString()"
             }
           }
         }

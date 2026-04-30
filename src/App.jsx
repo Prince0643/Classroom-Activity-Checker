@@ -47,6 +47,8 @@ import PendingScreen from './components/screens/PendingScreen.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
 import { CloseIcon } from './components/shared/Icons.jsx';
 import QRScannerModal from './components/shared/QRScannerModal.jsx';
+import { ref as dbRef, update as dbUpdate } from 'firebase/database';
+import { db } from './firebase.js';
 
 export default function App() {
   const [screen, setScreen] = useState('public');
@@ -689,7 +691,22 @@ export default function App() {
       const key = `public_last_type_${uid}`;
       const lastType = String(window.localStorage.getItem(key) || '').toUpperCase();
       const nextType = lastType === 'IN' ? 'OUT' : 'IN';
+      const now = new Date();
+      const profSchedules = (schedules || []).filter((s) => String(s?.professorUid || '') === uid);
+      const current = findCurrentScheduleForProfessor(profSchedules, now);
+      const scheduleId = current?.id || null;
+      const scheduleDetails = current
+        ? {
+            subject: current.fixed?.subject || '',
+            classroom: current.fixed?.classroom || '',
+            building: current.fixed?.building || '',
+            day: current.fixed?.day || '',
+            timeStart: current.fixed?.timeStart || '',
+            timeEnd: current.fixed?.timeEnd || '',
+          }
+        : null;
       try {
+        const ts = Date.now();
         await createTimeLog({
           professorUid: uid,
           professorName: '',
@@ -698,10 +715,17 @@ export default function App() {
           qrData: raw,
           qrSecret: String(payload.secret || ''),
           scannedVia: 'public_qr',
-          scheduleId: null,
-          scheduleDetails: null,
+          scheduleId,
+          scheduleDetails,
           status: 'on_time',
         });
+        if (scheduleId) {
+          const livePatch =
+            nextType === 'IN'
+              ? { tapInAt: ts, status: 'In Progress', updatedAt: ts, qrSecret: String(payload.secret || '') }
+              : { tapOutAt: ts, status: 'Completed', updatedAt: ts, qrSecret: String(payload.secret || '') };
+          await dbUpdate(dbRef(db, `schedules/${scheduleId}/live`), livePatch);
+        }
         window.localStorage.setItem(key, nextType);
         alert(`Recorded: ${nextType}`);
         setQrScannerOpen(false);
