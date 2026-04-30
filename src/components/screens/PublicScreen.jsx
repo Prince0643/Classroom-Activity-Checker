@@ -320,8 +320,6 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
           <div className="table table--classrooms">
             <div className="table__head">
               <div>Room</div>
-              <div>Capacity</div>
-              <div>Facilities</div>
               <div>Today</div>
               <div>Time</div>
               <div>Status</div>
@@ -341,12 +339,6 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
                       <div>
                         <div className="cellValue">{c?.roomNumber || ''}</div>
                         <div className="cell--muted">Floor {c?.floor || 1}</div>
-                      </div>
-                      <div>
-                        <div className="cellValue">{Number(c?.capacity || 0) || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="cellValue">{c?.facilities ? String(c.facilities) : '—'}</div>
                       </div>
                       <div>
                         <div className="cellValue">{s ? (s.fixed?.subject || '—') : '—'}</div>

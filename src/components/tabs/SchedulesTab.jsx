@@ -205,10 +205,32 @@ export default function SchedulesTab({
                   </button>
                 ) : (
                   <>
-                    <button className="btn btn--light btn--sm" type="button" onClick={() => onTapIn(row.id)}>
+                    <button
+                      className="btn btn--light btn--sm"
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await onTapIn(row.id);
+                          alert('Tap In recorded.');
+                        } catch (e) {
+                          alert(e?.message || 'Failed to Tap In.');
+                        }
+                      }}
+                    >
                       Tap In
                     </button>
-                    <button className="btn btn--light btn--sm" type="button" onClick={() => onTapOut(row.id)}>
+                    <button
+                      className="btn btn--light btn--sm"
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await onTapOut(row.id);
+                          alert('Tap Out recorded.');
+                        } catch (e) {
+                          alert(e?.message || 'Failed to Tap Out.');
+                        }
+                      }}
+                    >
                       Tap Out
                     </button>
                   </>

@@ -1,6 +1,8 @@
 :root{
   --navy:#123a7a;
   --navy2:#1e5bb8;
+  --sky:#90D5FF;
+  --sky2:#5bc0f7;
   --ink:#0b1220;
   --muted:#5b6b85;
   --bg:#eef5ff;
@@ -36,26 +38,27 @@ body{
   top:0;
   z-index:20;
   height:72px;
-  color:#eef5ff;
+  color:#0b1220;
   display:flex;
   align-items:center;
   justify-content:space-between;
   padding:0 18px;
-  background:
-    linear-gradient(180deg, rgba(18,58,122,.96) 0%, rgba(17,45,92,.96) 100%);
+  background:#90D5FF;
   box-shadow:0 10px 26px rgba(2,6,23,.16);
-  border-bottom:1px solid rgba(255,255,255,.10);
+  border-bottom:1px solid rgba(15,23,42,.10);
   backdrop-filter:blur(10px);
 }
 
-.brand{display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;border:0;background:transparent;color:inherit;padding:0;text-align:left;cursor:pointer}
 .brand__mark{
   width:40px;height:40px;display:grid;place-items:center;border-radius:14px;
   background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06));
   border:1px solid rgba(255,255,255,.14);
   box-shadow:0 10px 22px rgba(2,6,23,.18);
+  overflow:hidden;
 }
 .brand__mark svg{width:20px;height:20px}
+.brand__mark img{width:100%;height:100%;object-fit:cover}
 .brand__title{font-weight:800;letter-spacing:.6px;font-size:15px}
 .brand__subtitle{font-size:13px;opacity:.9;margin-top:1px}
 
@@ -78,6 +81,7 @@ body{
 .iconbtn:hover{background:rgba(255,255,255,.14);transform:translateY(-1px)}
 .iconbtn:active{transform:translateY(0)}
 .iconbtn--dark{border-color:rgba(15,23,42,.12);background:rgba(255,255,255,.84);color:var(--ink)}
+.iconbtn--black{border-color:rgba(15,23,42,.18);background:rgba(255,255,255,.35);color:#0b1220}
 
 .pill{
   height:36px;
@@ -103,6 +107,12 @@ body{
   color:var(--ink);
   border-color:rgba(15,23,42,.10);
 }
+.pill--login{
+  background:#0b1220;
+  border-color:rgba(11,18,32,.12);
+  color:#fff;
+}
+.pill--login:hover{background:#0f172a}
 
 .shell{max-width:1120px;margin:26px auto 92px;padding:0 18px 92px}
 
@@ -138,8 +148,8 @@ body{
 .panel--blue{
   background:
     radial-gradient(900px 420px at 10% 10%, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, rgba(30,91,184,.92) 0%, rgba(18,58,122,.92) 100%);
-  color:#eef5ff;
+    linear-gradient(180deg, rgba(144,213,255,.96) 0%, rgba(91,192,247,.96) 100%);
+  color:var(--ink);
 }
 
 .timebox{display:flex;align-items:center;gap:12px}
@@ -169,11 +179,11 @@ body{
 .table__head,.table__row{display:grid;gap:12px;align-items:center}
 .table--wide .table__head,.table--wide .table__row{grid-template-columns:1.1fr 1.6fr 1.4fr 1.2fr 1.2fr .9fr}
 .table--public .table__head,.table--public .table__row{grid-template-columns:1.1fr 1.6fr 1.4fr 1.35fr .9fr}
-.table--classrooms .table__head,.table--classrooms .table__row{grid-template-columns:1.1fr .9fr 1.2fr 1.6fr 1.15fr .9fr}
+.table--classrooms .table__head,.table--classrooms .table__row{grid-template-columns:1.1fr 1.6fr 1.15fr .9fr}
 .table__head{
   background:
-    linear-gradient(180deg, rgba(18,58,122,.96) 0%, rgba(17,45,92,.96) 100%);
-  color:#eef5ff;
+    linear-gradient(180deg, rgba(144,213,255,.96) 0%, rgba(91,192,247,.96) 100%);
+  color:var(--ink);
   padding:12px 16px;
   font-size:13px;
   font-weight:700;
@@ -192,10 +202,10 @@ body{
 .table__row:hover{
   transform:translateY(-1px);
   box-shadow:0 14px 30px rgba(2,6,23,.10);
-  border-color:rgba(30,91,184,.22);
+  border-color:rgba(91,192,247,.55);
 }
 .table__row--selected{
-  border-color:rgba(30,91,184,.40);
+  border-color:rgba(91,192,247,.80);
   box-shadow:0 16px 34px rgba(2,6,23,.14);
   outline:3px solid rgba(37,99,235,.18);
 }
@@ -306,12 +316,12 @@ body{
 .btn--light{background:rgba(255,255,255,.94);color:var(--ink)}
 .btn--light:hover{transform:translateY(-1px);box-shadow:0 12px 22px rgba(2,6,23,.10)}
 .btn--dark{
-  background:linear-gradient(180deg, rgba(30,91,184,1) 0%, rgba(18,58,122,1) 100%);
-  color:#fff;
-  border-color:rgba(255,255,255,.06);
-  box-shadow:0 14px 30px rgba(30,91,184,.26);
+  background:linear-gradient(180deg, var(--sky) 0%, var(--sky2) 100%);
+  color:var(--ink);
+  border-color:rgba(15,23,42,.14);
+  box-shadow:0 14px 30px rgba(91,192,247,.28);
 }
-.btn--dark:hover{transform:translateY(-1px);box-shadow:0 18px 36px rgba(30,91,184,.30)}
+.btn--dark:hover{transform:translateY(-1px);box-shadow:0 18px 36px rgba(91,192,247,.34)}
 .btn--sm{height:38px;padding:0 12px}
 
 .demo{
