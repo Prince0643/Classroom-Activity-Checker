@@ -405,6 +405,37 @@ export default function App() {
     return candidates[0].s;
   };
 
+  const timeToMinutes24 = (t) => {
+    const s = String(t || '').trim();
+    const m = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+  };
+
+  const findScheduleConflict = ({ building, classroom, day, start, end, ignoreId = null }) => {
+    const b = String(building || '').trim();
+    const c = String(classroom || '').trim();
+    const d = String(day || '').trim();
+    if (!b || !c || !d || start == null || end == null) return null;
+
+    for (const s of schedules || []) {
+      if (!s || (ignoreId && String(s.id) === String(ignoreId))) continue;
+      if (String(s.fixed?.building || '').trim() !== b) continue;
+      if (String(s.fixed?.classroom || '').trim() !== c) continue;
+      if (String(s.fixed?.day || '').trim() !== d) continue;
+      const ss = timeToMinutes24(s.fixed?.timeStart);
+      const ee = timeToMinutes24(s.fixed?.timeEnd);
+      if (ss == null || ee == null) continue;
+      // Overlap check (strict): [start,end) overlaps [ss,ee)
+      if (start < ee && ss < end) return s;
+    }
+    return null;
+  };
+
   const onLogout = async () => {
     await logout();
   };
@@ -427,15 +458,47 @@ export default function App() {
   };
 
   const adminCreateSchedule = async () => {
+    const building = adminScheduleForm.building.trim();
+    const classroom = adminScheduleForm.classroom.trim();
+    const day = adminScheduleForm.day;
+    const start = timeToMinutes24(adminScheduleForm.timeStart);
+    const end = timeToMinutes24(adminScheduleForm.timeEnd);
+
+    if (!adminScheduleForm.professorUid.trim()) {
+      alert('Please select a professor.');
+      return;
+    }
+    if (!building || !classroom || !String(adminScheduleForm.subject || '').trim() || !day) {
+      alert('Please fill in Building, Classroom, Subject, and Day.');
+      return;
+    }
+    if (start == null || end == null) {
+      alert('Please set a valid start and end time.');
+      return;
+    }
+    if (end <= start) {
+      alert('End time must be after start time.');
+      return;
+    }
+
+    const conflict = findScheduleConflict({ building, classroom, day, start, end });
+    if (conflict) {
+      alert(
+        `Schedule conflict for ${building} • Room ${classroom} on ${day}.\n` +
+          `Conflicts with: ${conflict.fixed?.subject || '(no subject)'} (${conflict.fixed?.timeStart || ''}–${conflict.fixed?.timeEnd || ''}).`
+      );
+      return;
+    }
+
     setAdminCreateBusy(true);
     try {
       await createSchedule({
         professorUid: adminScheduleForm.professorUid.trim(),
         professorName: adminScheduleForm.professorName.trim(),
         employeeId: adminScheduleForm.employeeId,
-        classroom: adminScheduleForm.classroom.trim(),
+        classroom,
         subject: adminScheduleForm.subject.trim(),
-        building: adminScheduleForm.building.trim(),
+        building,
         day: adminScheduleForm.day,
         timeStart: adminScheduleForm.timeStart,
         timeEnd: adminScheduleForm.timeEnd,
@@ -786,6 +849,7 @@ export default function App() {
             authUser={authUser}
             profile={profile}
             metaUser={metaUser}
+            onGoToPublic={() => setScreen('public')}
             onLogin={() => setScreen('login')}
             onLogout={onLogout}
             onReportClick={() => setReportModalOpen(true)}

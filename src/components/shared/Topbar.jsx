@@ -1,18 +1,18 @@
-import { HomeIcon, UserIcon, LogoutIcon, ReportIcon } from './Icons.jsx';
+import { UserIcon, LogoutIcon, ReportIcon } from './Icons.jsx';
 
-export default function Topbar({ authUser, profile, metaUser, onLogin, onLogout, onReportClick }) {
+export default function Topbar({ authUser, profile, metaUser, onLogin, onLogout, onReportClick, onGoToPublic }) {
   return (
     <header className="topbar">
       <div className="topbar__left">
-        <div className="brand">
+        <button className="brand" type="button" onClick={onGoToPublic}>
           <div className="brand__mark" aria-hidden="true">
-            <HomeIcon />
+            <img src="/logo.jpg" alt="" />
           </div>
           <div className="brand__text">
             <div className="brand__title">CACHE</div>
             <div className="brand__subtitle">Classroom Activity Checker</div>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="topbar__right">
