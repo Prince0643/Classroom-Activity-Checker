@@ -33,6 +33,8 @@ export default function DashboardScreen({
   pendingProfessors,
   allUsers,
   onApproveProfessor,
+  onRefreshProfessorQr,
+  onRefreshAllProfessorQrs,
   // Requests tab props
   changeRequests,
   onApproveRequest,
@@ -202,6 +204,8 @@ export default function DashboardScreen({
             pendingProfessors={pendingProfessors}
             allUsers={allUsers}
             onApprove={onApproveProfessor}
+            onRefreshProfessorQr={onRefreshProfessorQr}
+            onRefreshAllProfessorQrs={onRefreshAllProfessorQrs}
           />
         )}
 

@@ -109,6 +109,61 @@ export const mintTimeLogQr = onCall(async (req) => {
   return { token };
 });
 
+const assertAdmin = async (uid) => {
+  if (!uid) throw new HttpsError('unauthenticated', 'Login required.');
+  const db = getDatabase();
+  const snap = await db.ref(`admins/${uid}`).get();
+  if (!(snap.exists() && snap.val() === true)) {
+    throw new HttpsError('permission-denied', 'Admin access required.');
+  }
+};
+
+export const adminMintTimeLogQrForUser = onCall(async (req) => {
+  const callerUid = req.auth?.uid;
+  await assertAdmin(callerUid);
+
+  const uid = String(req.data?.uid || '').trim();
+  if (!uid) throw new HttpsError('invalid-argument', 'Missing uid.');
+
+  const payload = { uid, type: 'professor_time_card', iat: Date.now() };
+  const token = sign(payload);
+  const db = getDatabase();
+  await db.ref(`users/${uid}/timeLogQrToken`).set(token);
+  return { token };
+});
+
+export const adminMintTimeLogQrForAllProfessors = onCall(async (req) => {
+  const callerUid = req.auth?.uid;
+  await assertAdmin(callerUid);
+
+  const db = getDatabase();
+  const usersSnap = await db.ref('users').get();
+  const updates = {};
+  let updated = 0;
+  let skipped = 0;
+
+  usersSnap.forEach((c) => {
+    const uid = c.key;
+    const v = c.val() || {};
+    if (!uid) return;
+    if (String(v.role || '') !== 'professor') {
+      skipped += 1;
+      return;
+    }
+    if (v.approved !== true) {
+      skipped += 1;
+      return;
+    }
+    const payload = { uid, type: 'professor_time_card', iat: Date.now() };
+    const token = sign(payload);
+    updates[`users/${uid}/timeLogQrToken`] = token;
+    updated += 1;
+  });
+
+  if (Object.keys(updates).length) await db.ref().update(updates);
+  return { updated, skipped };
+});
+
 export const onAuthUserCreated = onUserCreated(async (event) => {
   const uid = event.data?.uid;
   if (!uid) return;

@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,6 +18,7 @@ const app = initializeApp(firebaseConfig);
 export { app };
 export const auth = getAuth(app);
 export const db = getDatabase(app);
+export const functions = getFunctions(app);
 
 let secondaryAuth = null;
 export const getSecondaryAuth = () => {

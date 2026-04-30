@@ -12,7 +12,8 @@ import {
   set,
   update,
 } from 'firebase/database';
-import { auth, db, getSecondaryAuth } from './firebase.js';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, functions, getSecondaryAuth } from './firebase.js';
 
 const randomSecret = () => {
   try {
@@ -49,6 +50,29 @@ const ensureProfessorQrSecret = async (uid, employeeId = '') => {
 export const watchQrTextForUser = (uid, cb) => {
   const r = ref(db, `qrSecrets/${uid}/qrText`);
   return onValue(r, (snap) => cb(snap.exists() ? String(snap.val() || '') : ''));
+};
+
+export const watchTimeLogQrTokenForUser = (uid, cb) => {
+  const r = ref(db, `users/${uid}/timeLogQrToken`);
+  return onValue(r, (snap) => cb(snap.exists() ? String(snap.val() || '') : ''));
+};
+
+export const mintTimeLogQrForSelf = async () => {
+  const fn = httpsCallable(functions, 'mintTimeLogQr');
+  const res = await fn({});
+  return String(res?.data?.token || '');
+};
+
+export const adminMintTimeLogQrForUser = async (uid) => {
+  const fn = httpsCallable(functions, 'adminMintTimeLogQrForUser');
+  const res = await fn({ uid: String(uid || '').trim() });
+  return String(res?.data?.token || '');
+};
+
+export const adminMintTimeLogQrForAllProfessors = async () => {
+  const fn = httpsCallable(functions, 'adminMintTimeLogQrForAllProfessors');
+  const res = await fn({});
+  return res?.data || null;
 };
 
 export const watchAuth = (cb) => onAuthStateChanged(auth, cb);

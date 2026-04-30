@@ -77,3 +77,15 @@ export const makeQrUrl = (user) => {
   const data = encodeURIComponent(text);
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${data}`;
 };
+
+export const makeTimeLogQrText = (token) => {
+  const t = String(token || '').trim();
+  if (!t) return '';
+  const base = String(import.meta.env.VITE_PUBLIC_TIMELOG_URL || '').trim();
+  if (!base) return '';
+  const u = new URL(base);
+  u.searchParams.set('t', t);
+  // Redirect back to the app after scan (no timelog param needed; scan is handled by the server).
+  u.searchParams.set('r', `${window.location.origin}/`);
+  return u.toString();
+};

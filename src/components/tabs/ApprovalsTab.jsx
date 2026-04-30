@@ -11,6 +11,8 @@ export default function ApprovalsTab({
   pendingProfessors,
   allUsers,
   onApprove,
+  onRefreshProfessorQr,
+  onRefreshAllProfessorQrs,
 }) {
   const [activeTab, setActiveTab] = useState('create');
   const [allUsersPage, setAllUsersPage] = useState(1);
@@ -180,6 +182,15 @@ export default function ApprovalsTab({
               <div className="section__title">All Professors</div>
               <div className="section__sub">View all registered professors</div>
             </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                className="btn btn--dark btn--sm"
+                type="button"
+                onClick={() => typeof onRefreshAllProfessorQrs === 'function' && onRefreshAllProfessorQrs()}
+              >
+                Refresh ALL QRs
+              </button>
+            </div>
           </div>
           <div className="schedule" style={{ padding: '20px' }}>
             {paginatedProfessors.length === 0 ? (
@@ -189,7 +200,7 @@ export default function ApprovalsTab({
                 <div
                   className="scheduleItem"
                   key={p.uid}
-                  style={{ gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 100px' }}
+                  style={{ gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 100px 140px' }}
                 >
                   <div>
                     <div className="cellTitle">Full Name</div>
@@ -210,6 +221,17 @@ export default function ApprovalsTab({
                   <div>
                     <div className="cellTitle">Status</div>
                     <StatusTag status={p.approved ? 'completed' : 'scheduled'} />
+                  </div>
+                  <div className="rowActions" style={{ justifyContent: 'flex-end' }}>
+                    <button
+                      className="btn btn--dark btn--sm"
+                      type="button"
+                      onClick={() => typeof onRefreshProfessorQr === 'function' && onRefreshProfessorQr(p.uid)}
+                      disabled={!p.uid || p.approved !== true}
+                      title={p.approved !== true ? 'Professor must be approved first' : 'Refresh QR token'}
+                    >
+                      Refresh QR
+                    </button>
                   </div>
                 </div>
               ))
