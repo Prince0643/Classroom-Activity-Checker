@@ -29,16 +29,15 @@ import {
   watchChangeRequests,
   watchClassrooms,
   watchPendingProfessors,
-  adminMintTimeLogQrForAllProfessors,
-  adminMintTimeLogQrForUser,
-  mintTimeLogQrForSelf,
   watchReports,
   watchSchedulesPublic,
   watchSchedulesForProfessor,
-  watchTimeLogQrTokenForUser,
   watchTimeLogsForProfessor,
+  watchQrTextForUser,
+  refreshAllProfessorQrSecretsAsAdmin,
+  refreshProfessorQrSecretAsAdmin,
 } from './cacheApi.js';
-import { pad2, makeQrUrl, makeTimeLogQrText } from './utils/helpers.js';
+import { pad2, makeQrUrl } from './utils/helpers.js';
 import Topbar from './components/shared/Topbar.jsx';
 import PublicScreen from './components/screens/PublicScreen.jsx';
 import LoginScreen from './components/screens/LoginScreen.jsx';
@@ -307,9 +306,8 @@ export default function App() {
     return () => window.clearInterval(id);
   }, []);
 
-  const [timeLogQrToken, setTimeLogQrToken] = useState('');
-  const timeLogQrText = useMemo(() => makeTimeLogQrText(timeLogQrToken), [timeLogQrToken]);
-  const qrUrl = useMemo(() => makeQrUrl({ qrText: timeLogQrText }), [timeLogQrText]);
+  const [qrText, setQrText] = useState('');
+  const qrUrl = useMemo(() => makeQrUrl({ qrText }), [qrText]);
 
   const metaUser = authUser ? `Logged in as ${profile?.displayName || authUser.email || authUser.uid}` : 'Not logged in';
   const welcomeTitle = authUser ? `Welcome, ${profile?.displayName || authUser.email || 'User'}` : 'Welcome';
@@ -317,47 +315,33 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser || isAdmin || !profile?.approved) {
-      setTimeLogQrToken('');
+      setQrText('');
       return undefined;
     }
-    const unsub = watchTimeLogQrTokenForUser(authUser.uid, (t) => setTimeLogQrToken(String(t || '').trim()));
+    const unsub = watchQrTextForUser(authUser.uid, (t) => setQrText(String(t || '').trim()));
     return () => {
       if (typeof unsub === 'function') unsub();
     };
   }, [authUser, isAdmin, profile?.approved]);
 
-  useEffect(() => {
-    // Ensure legacy accounts have a token stored.
-    if (!authUser || isAdmin || !profile?.approved) return;
-    if (String(timeLogQrToken || '').trim()) return;
-    (async () => {
-      try {
-        const token = await mintTimeLogQrForSelf();
-        if (token) setTimeLogQrToken(token);
-      } catch {
-        // ignore; token may be minted later by admin
-      }
-    })();
-  }, [authUser, isAdmin, profile?.approved, timeLogQrToken]);
-
   const refreshAllProfessorQrs = async () => {
-    if (!confirm('Refresh QR tokens for all approved professors?')) return;
+    if (!confirm('Refresh QR for all approved professors?')) return;
     try {
-      const res = await adminMintTimeLogQrForAllProfessors();
+      const res = await refreshAllProfessorQrSecretsAsAdmin(allUsers || []);
       const updated = Number(res?.updated || 0);
-      const skipped = Number(res?.skipped || 0);
-      alert(`Done. Updated: ${updated}, Skipped: ${skipped}`);
+      alert(`Done. Refreshed QR secrets for ${updated} professor(s).`);
     } catch (err) {
-      alert(err?.message || 'Failed to refresh all QR tokens');
+      alert(err?.message || 'Failed to refresh all QR secrets');
     }
   };
 
   const refreshProfessorQr = async (uid) => {
     try {
-      await adminMintTimeLogQrForUser(uid);
-      alert('QR token refreshed.');
+      const professor = (allUsers || []).find((u) => String(u.uid) === String(uid));
+      await refreshProfessorQrSecretAsAdmin(uid, professor?.employeeId || '');
+      alert('QR secret refreshed.');
     } catch (err) {
-      alert(err?.message || 'Failed to refresh QR token');
+      alert(err?.message || 'Failed to refresh QR secret');
     }
   };
 

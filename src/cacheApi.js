@@ -12,8 +12,7 @@ import {
   set,
   update,
 } from 'firebase/database';
-import { httpsCallable } from 'firebase/functions';
-import { auth, db, functions, getSecondaryAuth } from './firebase.js';
+import { auth, db, getSecondaryAuth } from './firebase.js';
 
 const randomSecret = () => {
   try {
@@ -57,22 +56,37 @@ export const watchTimeLogQrTokenForUser = (uid, cb) => {
   return onValue(r, (snap) => cb(snap.exists() ? String(snap.val() || '') : ''));
 };
 
-export const mintTimeLogQrForSelf = async () => {
-  const fn = httpsCallable(functions, 'mintTimeLogQr');
-  const res = await fn({});
-  return String(res?.data?.token || '');
+export const refreshProfessorQrSecretAsAdmin = async (uid, employeeId = '') => {
+  const cleanUid = String(uid || '').trim();
+  if (!cleanUid) throw new Error('Missing uid');
+  const secret = randomSecret();
+  const qrText = makeProfessorQrText(cleanUid, secret, employeeId);
+  await set(ref(db, `qrSecrets/${cleanUid}`), {
+    secret,
+    qrText,
+    updatedAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  });
+  return { secret, qrText };
 };
 
-export const adminMintTimeLogQrForUser = async (uid) => {
-  const fn = httpsCallable(functions, 'adminMintTimeLogQrForUser');
-  const res = await fn({ uid: String(uid || '').trim() });
-  return String(res?.data?.token || '');
-};
-
-export const adminMintTimeLogQrForAllProfessors = async () => {
-  const fn = httpsCallable(functions, 'adminMintTimeLogQrForAllProfessors');
-  const res = await fn({});
-  return res?.data || null;
+export const refreshAllProfessorQrSecretsAsAdmin = async (allUsers = []) => {
+  const updates = {};
+  let updated = 0;
+  for (const u of allUsers || []) {
+    if (!u || u.role !== 'professor' || u.approved !== true) continue;
+    const uid = String(u.uid || '').trim();
+    if (!uid) continue;
+    const secret = randomSecret();
+    const qrText = makeProfessorQrText(uid, secret, u.employeeId || '');
+    updates[`qrSecrets/${uid}/secret`] = secret;
+    updates[`qrSecrets/${uid}/qrText`] = qrText;
+    updates[`qrSecrets/${uid}/updatedAt`] = serverTimestamp();
+    if (u.__hasQrSecrets !== true) updates[`qrSecrets/${uid}/createdAt`] = serverTimestamp();
+    updated += 1;
+  }
+  if (Object.keys(updates).length) await update(ref(db), updates);
+  return { updated };
 };
 
 export const watchAuth = (cb) => onAuthStateChanged(auth, cb);
