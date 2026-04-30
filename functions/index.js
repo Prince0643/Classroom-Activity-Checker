@@ -184,8 +184,19 @@ export const publicTimeLog = onRequest((req, res) => {
       });
 
       if (scheduleId) {
-        if (type === 'IN') await db.ref(`schedules/${scheduleId}/live`).update({ tapInAt: nowMs, updatedAt: nowMs });
-        else await db.ref(`schedules/${scheduleId}/live`).update({ tapOutAt: nowMs, updatedAt: nowMs });
+        if (type === 'IN') {
+          await db.ref(`schedules/${scheduleId}/live`).update({
+            tapInAt: nowMs,
+            status: 'In Progress',
+            updatedAt: nowMs,
+          });
+        } else {
+          await db.ref(`schedules/${scheduleId}/live`).update({
+            tapOutAt: nowMs,
+            status: 'Completed',
+            updatedAt: nowMs,
+          });
+        }
       }
 
       // Redirect back to the app if a return URL is provided, otherwise show a simple confirmation.

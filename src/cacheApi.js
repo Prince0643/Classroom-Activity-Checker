@@ -182,6 +182,7 @@ export const createSchedule = async (schedule) => {
       classroom: schedule.classroom || '',
       subject: schedule.subject || '',
       building: schedule.building || '',
+      day: schedule.day || '',
       timeStart: schedule.timeStart || 0,
       timeEnd: schedule.timeEnd || 0,
       professorName: schedule.professorName || '',
@@ -205,6 +206,7 @@ export const updateScheduleFixedAsAdmin = async (scheduleId, fixed, professorUid
     'fixed/classroom': fixed.classroom,
     'fixed/subject': fixed.subject,
     'fixed/building': fixed.building,
+    'fixed/day': fixed.day,
     'fixed/timeStart': fixed.timeStart,
     'fixed/timeEnd': fixed.timeEnd,
     'fixed/professorName': fixed.professorName || '',
@@ -295,6 +297,7 @@ export const applyChangeRequestToScheduleAsAdmin = async (request, adminUid) => 
     classroom: schedule.fixed?.classroom || '',
     subject: schedule.fixed?.subject || '',
     building: schedule.fixed?.building || '',
+    day: schedule.fixed?.day || '',
     timeStart: schedule.fixed?.timeStart || 0,
     timeEnd: schedule.fixed?.timeEnd || 0,
     professorName: schedule.fixed?.professorName || '',
@@ -304,6 +307,7 @@ export const applyChangeRequestToScheduleAsAdmin = async (request, adminUid) => 
   if (typeof ch.classroom === 'string') fixed.classroom = ch.classroom;
   if (typeof ch.subject === 'string') fixed.subject = ch.subject;
   if (typeof ch.building === 'string') fixed.building = ch.building;
+  if (typeof ch.day === 'string') fixed.day = ch.day;
   if (typeof ch.timeStart === 'number') fixed.timeStart = ch.timeStart;
   if (typeof ch.timeEnd === 'number') fixed.timeEnd = ch.timeEnd;
 

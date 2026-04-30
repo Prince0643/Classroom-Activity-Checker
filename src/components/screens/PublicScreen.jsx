@@ -1,6 +1,5 @@
 import { ClockIcon } from '../shared/Icons.jsx';
 import { formatDayTimeRange } from '../../utils/helpers.js';
-import StatusTag from '../shared/StatusTag.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 function normalizeBuildingName(name) {
@@ -22,6 +21,48 @@ function shouldIgnoreArrowKeyEvent(target) {
 function isModalOpen() {
   // Treat only visible app modals as "open" (some modals are always mounted and toggled via `.hidden`).
   return !!document.querySelector('.modal[role="dialog"][aria-modal="true"]:not(.hidden)');
+}
+
+function timeToMinutes(t) {
+  if (t == null) return null;
+  if (typeof t === 'number') {
+    const d = new Date(t);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.getHours() * 60 + d.getMinutes();
+  }
+  const s = String(t).trim();
+  if (!s) return null;
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) return Number(m24[1]) * 60 + Number(m24[2]);
+  const m12 = s.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (m12) {
+    let h = Number(m12[1]) % 12;
+    if (String(m12[3]).toUpperCase() === 'PM') h += 12;
+    return h * 60 + Number(m12[2]);
+  }
+  return null;
+}
+
+function pickActiveScheduleForRoom(schedulesForRoom, now = new Date()) {
+  const day = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Manila' });
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const candidates = (schedulesForRoom || [])
+    .filter((s) => String(s?.fixed?.day || '') === day)
+    .map((s) => ({
+      s,
+      start: timeToMinutes(s?.fixed?.timeStart),
+      end: timeToMinutes(s?.fixed?.timeEnd),
+    }))
+    .filter((x) => x.start != null && x.end != null && x.start <= nowMins && nowMins <= x.end);
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => Number(a.start) - Number(b.start));
+  return candidates[0].s;
+}
+
+function isScheduleOccupied(schedule) {
+  const tapInAt = Number(schedule?.live?.tapInAt || 0) || 0;
+  const tapOutAt = Number(schedule?.live?.tapOutAt || 0) || 0;
+  return tapInAt > 0 && (tapOutAt <= 0 || tapOutAt < tapInAt);
 }
 
 export default function PublicScreen({ clock, today, schedules, buildings, classrooms, onScanQr }) {
@@ -87,18 +128,22 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
       });
 
       const buildingSchedules = key ? schedulesByBuilding.get(key) || [] : [];
-      const scheduleByRoom = new Map();
+      const schedulesByRoom = new Map();
       for (const s of buildingSchedules) {
         const roomKey = normalizeRoomNumber(s?.fixed?.classroom);
         if (!roomKey) continue;
-        if (!scheduleByRoom.has(roomKey)) scheduleByRoom.set(roomKey, s);
+        const arr = schedulesByRoom.get(roomKey) || [];
+        arr.push(s);
+        schedulesByRoom.set(roomKey, arr);
       }
 
       const classroomRows = sortedClassrooms.map((c) => {
         const roomKey = normalizeRoomNumber(c?.roomNumber);
+        const candidates = roomKey ? schedulesByRoom.get(roomKey) || [] : [];
+        const activeSchedule = pickActiveScheduleForRoom(candidates, new Date());
         return {
           classroom: c,
-          schedule: roomKey ? scheduleByRoom.get(roomKey) || null : null,
+          schedule: activeSchedule,
         };
       });
 
@@ -313,7 +358,13 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
                         </div>
                       </div>
                       <div>
-                        {s ? <StatusTag status={s.live?.status} /> : <span className="cell--muted">—</span>}
+                        {s ? (
+                          <span className={`tag ${isScheduleOccupied(s) ? 'tag--progress' : 'tag--scheduled'}`}>
+                            {isScheduleOccupied(s) ? 'Occupied' : 'Available'}
+                          </span>
+                        ) : (
+                          <span className="cell--muted">Available</span>
+                        )}
                       </div>
                     </div>
                   );
