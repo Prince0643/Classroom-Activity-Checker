@@ -46,6 +46,7 @@ import PendingScreen from './components/screens/PendingScreen.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
 import { CloseIcon } from './components/shared/Icons.jsx';
 import QRScannerModal from './components/shared/QRScannerModal.jsx';
+import ScanConfirmModal from './components/shared/ScanConfirmModal.jsx';
 import { ref as dbRef, update as dbUpdate } from 'firebase/database';
 import { db } from './firebase.js';
 
@@ -66,6 +67,7 @@ export default function App() {
   const [timeLogs, setTimeLogs] = useState([]);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
+  const [scanConfirm, setScanConfirm] = useState({ open: false, title: '', subtitle: '' });
   const [clock, setClock] = useState('--:--:--');
   const [today, setToday] = useState('---');
   const [qrOpen, setQrOpen] = useState(false);
@@ -719,6 +721,12 @@ export default function App() {
     a.remove();
   };
 
+  const showScanConfirm = (nextType) => {
+    const type = String(nextType || '').toUpperCase();
+    const title = type ? `Recorded: ${type}` : 'Recorded';
+    setScanConfirm({ open: true, title, subtitle: '' });
+  };
+
   const handleTimeLogScan = async (raw) => {
     if (scanBusy) return;
     setScanBusy(true);
@@ -774,7 +782,7 @@ export default function App() {
           await dbUpdate(dbRef(db, `schedules/${scheduleId}/live`), livePatch);
         }
         window.localStorage.setItem(key, nextType);
-        alert(`Recorded: ${nextType}`);
+        showScanConfirm(nextType);
         setQrScannerOpen(false);
       } catch (err) {
         alert(err?.message || 'Failed to create time log');
@@ -817,7 +825,7 @@ export default function App() {
         scheduleDetails,
         status: 'on_time',
       });
-      alert(`Recorded: ${nextType}`);
+      showScanConfirm(nextType);
       setQrScannerOpen(false);
     } catch (err) {
       alert(err?.message || 'Failed to create time log');
@@ -955,6 +963,13 @@ export default function App() {
             onClose={() => (scanBusy ? null : setQrScannerOpen(false))}
             onScanSuccess={handleTimeLogScan}
             scanBusy={scanBusy}
+          />
+          <ScanConfirmModal
+            isOpen={!!scanConfirm.open}
+            title={scanConfirm.title}
+            subtitle={scanConfirm.subtitle}
+            onClose={() => setScanConfirm({ open: false, title: '', subtitle: '' })}
+            durationMs={2000}
           />
         </>
       )}
