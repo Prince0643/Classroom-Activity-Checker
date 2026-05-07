@@ -68,14 +68,8 @@ function isScheduleOccupied(schedule) {
 export default function PublicScreen({ clock, today, schedules, buildings, classrooms, onScanQr }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [selectedRowIdx, setSelectedRowIdx] = useState(0);
-  const [slotAnimating, setSlotAnimating] = useState(false);
-  const [slotOffset, setSlotOffset] = useState(-1);
-  const pendingDeltaRef = useRef(0);
   const slidesRef = useRef([]);
   const selectedRowElRef = useRef(null);
-
-  const SLOT_WINDOW = 3;
-  const SLOT_CENTER = 1;
 
   const slides = useMemo(() => {
     const buildingList = Array.isArray(buildings) ? buildings : [];
@@ -202,17 +196,11 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
   useEffect(() => {
     if (!selectedRowElRef.current) return;
     try {
-      // Keep the selected row visible in non-slot fallback layouts.
       selectedRowElRef.current.scrollIntoView({ block: 'nearest' });
     } catch {
       // ignore
     }
   }, [activeIdx, selectedRowIdx]);
-
-  useEffect(() => {
-    // Slot "resting" position: center row in view.
-    setSlotOffset(-SLOT_CENTER);
-  }, []);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -255,61 +243,18 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
 
       const rows = slidesRef.current[activeIdx]?.classrooms || [];
       if (!rows.length) return;
-      if (slotAnimating) return;
       if (isUp) {
-        pendingDeltaRef.current = -1;
-        setSlotAnimating(true);
-        // Move track down so the previous row rolls into the center.
-        setSlotOffset(0);
+        setSelectedRowIdx((i) => (i - 1 + rows.length) % rows.length);
       } else if (isDown) {
-        pendingDeltaRef.current = 1;
-        setSlotAnimating(true);
-        // Move track up so the next row rolls into the center.
-        setSlotOffset(-2);
+        setSelectedRowIdx((i) => (i + 1) % rows.length);
       }
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [activeIdx, slotAnimating]);
+  }, [activeIdx]);
 
   const activeSlide = slides[activeIdx] || null;
-  const slotRows = useMemo(() => {
-    const rows = activeSlide?.classrooms || [];
-    if (!rows.length) return [];
-    const len = rows.length;
-    const idx = ((selectedRowIdx % len) + len) % len;
-    const prev = rows[(idx - 1 + len) % len];
-    const curr = rows[idx];
-    const next = rows[(idx + 1) % len];
-    return [
-      { row: prev, virtualIndex: idx - 1, kind: 'prev' },
-      { row: curr, virtualIndex: idx, kind: 'curr' },
-      { row: next, virtualIndex: idx + 1, kind: 'next' },
-    ];
-  }, [activeSlide?.classrooms, selectedRowIdx]);
-
-  const handleSlotTransitionEnd = () => {
-    if (!slotAnimating) return;
-    const rows = slidesRef.current[activeIdx]?.classrooms || [];
-    if (!rows.length) {
-      setSlotAnimating(false);
-      setSlotOffset(-SLOT_CENTER);
-      pendingDeltaRef.current = 0;
-      return;
-    }
-
-    const delta = pendingDeltaRef.current || 0;
-    pendingDeltaRef.current = 0;
-    if (delta) {
-      setSelectedRowIdx((i) => (i + delta + rows.length) % rows.length);
-    }
-
-    // Reset to center position without animation on next frame.
-    requestAnimationFrame(() => {
-      setSlotAnimating(false);
-      setSlotOffset(-SLOT_CENTER);
-    });
-  };
+  const selectedRow = activeSlide?.classrooms?.length ? activeSlide.classrooms[selectedRowIdx] : null;
 
   return (
     <section className="screen">
@@ -380,54 +325,57 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
               <div>Time</div>
               <div>Status</div>
             </div>
-            <div className="table__body">
+            <div className="table__body table__body--scroll" aria-label="Classrooms (use ↑/↓ to select)">
               {activeSlide?.classrooms?.length ? (
-                <div className="slot" aria-label="Classroom slot carousel (use ↑/↓)">
-                  <div className="slot__viewport">
-                    <div
-                      className={`slot__track ${slotAnimating ? 'slot__track--anim' : 'slot__track--rest'}`}
-                      style={{ transform: `translate3d(0, calc(var(--slot-row-h) * ${slotOffset}), 0)` }}
-                      onTransitionEnd={handleSlotTransitionEnd}
-                    >
-                      {slotRows.map(({ row, kind }, i) => {
-                        const c = row?.classroom;
-                        const s = row?.schedule;
-                        const isSelected = kind === 'curr';
-                        return (
-                          <div
-                            className={`slot__row table__row ${isSelected ? 'table__row--selected' : ''}`}
-                            key={`${c?.id || kind || i}`}
-                            ref={isSelected ? selectedRowElRef : null}
-                            aria-current={isSelected ? 'true' : 'false'}
-                          >
-                            <div>
-                              <div className="cellValue">{c?.roomNumber || ''}</div>
-                              <div className="cell--muted">Floor {c?.floor || 1}</div>
-                            </div>
-                            <div>
-                              <div className="cellValue">{s ? (s.fixed?.subject || '—') : '—'}</div>
-                              <div className="cell--muted">{s ? (s.fixed?.professorName || '') : ''}</div>
-                            </div>
-                            <div>
-                              <div className="cellValue">
-                                {s ? formatDayTimeRange(s.fixed?.day, s.fixed?.timeStart, s.fixed?.timeEnd) : '—'}
-                              </div>
-                            </div>
-                            <div>
-                              {s ? (
-                                <span className={`tag ${isScheduleOccupied(s) ? 'tag--progress' : 'tag--scheduled'}`}>
-                                  {isScheduleOccupied(s) ? 'Occupied' : 'Available'}
-                                </span>
-                              ) : (
-                                <span className="cell--muted">Available</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                <div>
+                  {activeSlide.classrooms.map((row, i) => {
+                    const c = row?.classroom;
+                    const s = row?.schedule;
+                    const isSelected = i === selectedRowIdx;
+                    return (
+                      <div
+                        className={`table__row ${isSelected ? 'table__row--selected' : ''}`}
+                        key={`${c?.id || i}`}
+                        ref={isSelected ? selectedRowElRef : null}
+                        aria-current={isSelected ? 'true' : 'false'}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedRowIdx(i)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedRowIdx(i);
+                          }
+                        }}
+                      >
+                        <div>
+                          <div className="cellValue">{c?.roomNumber || ''}</div>
+                          <div className="cell--muted">Floor {c?.floor || 1}</div>
+                        </div>
+                        <div>
+                          <div className="cellValue">{s ? (s.fixed?.subject || '—') : '—'}</div>
+                          <div className="cell--muted">{s ? (s.fixed?.professorName || '') : ''}</div>
+                        </div>
+                        <div>
+                          <div className="cellValue">{s ? formatDayTimeRange(s.fixed?.day, s.fixed?.timeStart, s.fixed?.timeEnd) : '—'}</div>
+                        </div>
+                        <div>
+                          {s ? (
+                            <span className={`tag ${isScheduleOccupied(s) ? 'tag--progress' : 'tag--scheduled'}`}>
+                              {isScheduleOccupied(s) ? 'Occupied' : 'Scheduled'}
+                            </span>
+                          ) : (
+                            <span className="cell--muted">Available</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {selectedRow ? (
+                    <div className="table__hint" aria-hidden="true">
+                      Use ↑ / ↓ to move selection.
                     </div>
-                  </div>
-                  <div className="slot__hint">Use ↑ / ↓ to scroll classrooms.</div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="emptyState">

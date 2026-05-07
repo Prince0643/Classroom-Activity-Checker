@@ -4,6 +4,7 @@ import {
   get,
   onValue,
   orderByChild,
+  limitToLast,
   push,
   query,
   ref,
@@ -98,6 +99,20 @@ export const watchTimeLogsForProfessor = (professorUid, cb) => {
     snap.forEach((c) => {
       const v = c.val();
       if (v && v.professorUid === professorUid) out.push({ id: c.key, ...v });
+    });
+    out.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+    cb(out);
+  });
+};
+
+export const watchTimeLogsAsAdmin = (cb, { limit = 5000 } = {}) => {
+  const cleanLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.min(50000, Number(limit))) : 5000;
+  const q = query(ref(db, 'timeLogs'), orderByChild('timestamp'), limitToLast(cleanLimit));
+  return onValue(q, (snap) => {
+    const out = [];
+    snap.forEach((c) => {
+      const v = c.val();
+      if (v) out.push({ id: c.key, ...v });
     });
     out.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
     cb(out);

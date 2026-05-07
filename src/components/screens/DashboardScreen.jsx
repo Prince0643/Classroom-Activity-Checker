@@ -7,6 +7,7 @@ import ProfileTab from '../tabs/ProfileTab.jsx';
 import BuildingsTab from '../tabs/BuildingsTab.jsx';
 import ReportsTab from '../tabs/ReportsTab.jsx';
 import TimeLogsTab from '../tabs/TimeLogsTab.jsx';
+import AttendanceTab from '../tabs/AttendanceTab.jsx';
 
 export default function DashboardScreen({
   activeTab,
@@ -64,6 +65,7 @@ export default function DashboardScreen({
   reportSubmitBusy,
   // Time Logs props
   timeLogs,
+  adminTimeLogs,
   onOpenTimeLogScanner,
   scanBusy,
 }) {
@@ -124,6 +126,17 @@ export default function DashboardScreen({
                 <HomeIcon />
               </span>
               Buildings
+            </button>
+
+            <button
+              className={`tab ${activeTab === 'attendance' ? 'is-active' : ''}`}
+              type="button"
+              onClick={() => onTabChange('attendance')}
+            >
+              <span className="tab__icon" aria-hidden="true">
+                <ClockIcon />
+              </span>
+              Attendance
             </button>
           </>
         ) : (
@@ -226,6 +239,14 @@ export default function DashboardScreen({
             onCreateClassroom={onCreateClassroom}
             onDeleteBuilding={onDeleteBuilding}
             onDeleteClassroom={onDeleteClassroom}
+          />
+        )}
+
+        {activeTab === 'attendance' && isAdmin && (
+          <AttendanceTab
+            schedules={schedules}
+            professors={allUsers?.filter((u) => u.role === 'professor') || []}
+            timeLogs={adminTimeLogs || []}
           />
         )}
 

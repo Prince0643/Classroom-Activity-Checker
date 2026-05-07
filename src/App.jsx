@@ -33,6 +33,7 @@ import {
   watchSchedulesPublic,
   watchSchedulesForProfessor,
   watchTimeLogsForProfessor,
+  watchTimeLogsAsAdmin,
   watchQrTextForUser,
   refreshAllProfessorQrSecretsAsAdmin,
   refreshProfessorQrSecretAsAdmin,
@@ -65,6 +66,7 @@ export default function App() {
   const [classrooms, setClassrooms] = useState([]);
   const [reports, setReports] = useState([]);
   const [timeLogs, setTimeLogs] = useState([]);
+  const [adminTimeLogs, setAdminTimeLogs] = useState([]);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
   const [scanConfirm, setScanConfirm] = useState({ open: false, title: '', subtitle: '' });
@@ -286,6 +288,17 @@ export default function App() {
       if (typeof unsub === 'function') unsub();
     };
   }, [authUser, isAdmin, profile?.approved]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin) {
+      setAdminTimeLogs([]);
+      return undefined;
+    }
+    const unsub = watchTimeLogsAsAdmin(setAdminTimeLogs, { limit: 5000 });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [authUser, isAdmin]);
 
   useEffect(() => {
     const tick = () => {
@@ -952,6 +965,7 @@ export default function App() {
                 onDeleteReport={handleDeleteReport}
                 reportSubmitBusy={reportSubmitBusy}
                 timeLogs={timeLogs}
+                adminTimeLogs={adminTimeLogs}
                 scanBusy={scanBusy}
                 onOpenTimeLogScanner={() => setQrScannerOpen(true)}
               />
