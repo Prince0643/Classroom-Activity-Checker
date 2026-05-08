@@ -13,20 +13,30 @@ export default function ApprovalsTab({
   onApprove,
   onRefreshProfessorQr,
   onRefreshAllProfessorQrs,
+  onDisableProfessor,
+  adminUid,
 }) {
   const [activeTab, setActiveTab] = useState('create');
   const [allUsersPage, setAllUsersPage] = useState(1);
   const [pendingPage, setPendingPage] = useState(1);
+  const [showDisabled, setShowDisabled] = useState(false);
   const itemsPerPage = 10;
 
   const professors = allUsers.filter((u) => u.role === 'professor');
+  const activeProfessors = professors.filter((u) => u.disabled !== true);
   const totalProfessors = professors.length;
+  const totalActiveProfessors = activeProfessors.length;
   const totalPending = pendingProfessors.length;
 
-  const totalProfPages = Math.ceil(totalProfessors / itemsPerPage);
+  const visibleProfessors = showDisabled
+    ? [...professors].sort((a, b) => Number(a.disabled === true) - Number(b.disabled === true))
+    : activeProfessors;
+  const totalVisibleProfessors = visibleProfessors.length;
+
+  const totalProfPages = Math.ceil(totalVisibleProfessors / itemsPerPage);
   const totalPendingPages = Math.ceil(totalPending / itemsPerPage);
 
-  const paginatedProfessors = professors.slice(
+  const paginatedProfessors = visibleProfessors.slice(
     (allUsersPage - 1) * itemsPerPage,
     allUsersPage * itemsPerPage
   );
@@ -51,7 +61,7 @@ export default function ApprovalsTab({
           onClick={() => { setActiveTab('all'); setAllUsersPage(1); }}
           style={{ height: 36 }}
         >
-          All Professors ({totalProfessors})
+          All Professors ({totalActiveProfessors}{showDisabled ? ` / ${totalProfessors}` : ''})
         </button>
         <button
           className={`tab ${activeTab === 'pending' ? 'is-active' : ''}`}
@@ -180,9 +190,21 @@ export default function ApprovalsTab({
           <div className="section__head">
             <div>
               <div className="section__title">All Professors</div>
-              <div className="section__sub">View all registered professors</div>
+              <div className="section__sub">
+                {showDisabled
+                  ? `Showing active + disabled professors (${totalActiveProfessors} active / ${totalProfessors} total)`
+                  : `Showing active professors only (${totalActiveProfessors} active)`}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={showDisabled}
+                  onChange={(e) => { setShowDisabled(e.target.checked); setAllUsersPage(1); }}
+                />
+                Show disabled
+              </label>
               <button
                 className="btn btn--dark btn--sm"
                 type="button"
@@ -200,7 +222,7 @@ export default function ApprovalsTab({
                 <div
                   className="scheduleItem"
                   key={p.uid}
-                  style={{ gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 100px 140px' }}
+                  style={{ gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 100px 220px' }}
                 >
                   <div>
                     <div className="cellTitle">Full Name</div>
@@ -220,17 +242,31 @@ export default function ApprovalsTab({
                   </div>
                   <div>
                     <div className="cellTitle">Status</div>
-                    <StatusTag status={p.approved ? 'completed' : 'scheduled'} />
+                    <StatusTag status={p.disabled ? 'cancelled' : p.approved ? 'completed' : 'scheduled'} />
                   </div>
                   <div className="rowActions" style={{ justifyContent: 'flex-end' }}>
                     <button
                       className="btn btn--dark btn--sm"
                       type="button"
                       onClick={() => typeof onRefreshProfessorQr === 'function' && onRefreshProfessorQr(p.uid)}
-                      disabled={!p.uid || p.approved !== true}
+                      disabled={!p.uid || p.approved !== true || p.disabled === true}
                       title={p.approved !== true ? 'Professor must be approved first' : 'Refresh QR token'}
                     >
                       Refresh QR
+                    </button>
+                    <button
+                      className="btn btn--light btn--sm"
+                      type="button"
+                      disabled={!p.uid || p.disabled === true || typeof onDisableProfessor !== 'function' || !adminUid}
+                      title={p.disabled === true ? 'Professor is already disabled' : 'Disable professor account'}
+                      onClick={() => {
+                        if (!p.uid) return;
+                        if (!confirm(`Disable this professor?\n\n${p.fullName || p.displayName || p.email || p.uid}`)) return;
+                        if (!confirm('This will block their access and prevent QR usage. Continue?')) return;
+                        onDisableProfessor(p.uid);
+                      }}
+                    >
+                      Disable
                     </button>
                   </div>
                 </div>
@@ -240,7 +276,7 @@ export default function ApprovalsTab({
               currentPage={allUsersPage}
               totalPages={totalProfPages}
               onPageChange={setAllUsersPage}
-              totalItems={totalProfessors}
+              totalItems={totalVisibleProfessors}
             />
           </div>
         </div>

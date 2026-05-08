@@ -34,6 +34,7 @@ export default function DashboardScreen({
   pendingProfessors,
   allUsers,
   onApproveProfessor,
+  onDisableProfessor,
   onRefreshProfessorQr,
   onRefreshAllProfessorQrs,
   // Requests tab props
@@ -219,6 +220,8 @@ export default function DashboardScreen({
             onApprove={onApproveProfessor}
             onRefreshProfessorQr={onRefreshProfessorQr}
             onRefreshAllProfessorQrs={onRefreshAllProfessorQrs}
+            onDisableProfessor={onDisableProfessor}
+            adminUid={authUser?.uid || ''}
           />
         )}
 

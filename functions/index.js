@@ -92,6 +92,22 @@ export const mintTimeLogQr = onCall(async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Login required.');
 
+  // Block disabled/unapproved professors from minting QR tokens.
+  try {
+    const db = getDatabase();
+    const profSnap = await db.ref(`users/${uid}`).get();
+    const prof = profSnap.exists() ? profSnap.val() : null;
+    if (prof?.disabled === true) {
+      throw new HttpsError('failed-precondition', 'Account disabled.');
+    }
+    if (prof?.approved !== true) {
+      throw new HttpsError('failed-precondition', 'Account not approved.');
+    }
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    throw new HttpsError('internal', 'Failed to verify account status.');
+  }
+
   // Keep payload minimal; server verifies signature.
   const payload = {
     uid,
@@ -188,6 +204,17 @@ export const publicTimeLog = onRequest((req, res) => {
       }
 
       const db = getDatabase();
+      const profSnap = await db.ref(`users/${payload.uid}`).get();
+      const prof = profSnap.exists() ? profSnap.val() : null;
+      if (prof?.disabled === true) {
+        res.status(403).send('Account disabled');
+        return;
+      }
+      if (prof?.approved !== true) {
+        res.status(403).send('Account not approved');
+        return;
+      }
+
       const now = new Date();
       const nowMs = Date.now();
       const dateIso = now.toISOString().slice(0, 10);

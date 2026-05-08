@@ -226,6 +226,22 @@ export const approveProfessor = async (uid, approved) => {
   await update(r, patch);
 };
 
+export const disableProfessorAsAdmin = async (uid, adminUid) => {
+  const cleanUid = String(uid || '').trim();
+  if (!cleanUid) throw new Error('Missing professor UID.');
+  const cleanAdminUid = String(adminUid || '').trim();
+  if (!cleanAdminUid) throw new Error('Missing admin UID.');
+
+  const r = ref(db, `users/${cleanUid}`);
+  await update(r, {
+    disabled: true,
+    disabledAt: serverTimestamp(),
+    disabledBy: cleanAdminUid,
+    approved: false,
+    updatedAt: serverTimestamp(),
+  });
+};
+
 export const createSchedule = async (schedule) => {
   const baseRef = push(ref(db, 'schedules'));
   const id = baseRef.key;

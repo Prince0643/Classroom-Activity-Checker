@@ -11,6 +11,7 @@ import {
   deleteClassroomAsAdmin,
   deleteReportAsAdmin,
   deleteScheduleAsAdmin,
+  disableProfessorAsAdmin,
   getIsAdmin,
   getOrCreateProfessorProfile,
   getUserProfile,
@@ -45,6 +46,7 @@ import LoginScreen from './components/screens/LoginScreen.jsx';
 import SignUpScreen from './components/screens/SignUpScreen.jsx';
 import PendingScreen from './components/screens/PendingScreen.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
+import DisabledScreen from './components/screens/DisabledScreen.jsx';
 import { CloseIcon } from './components/shared/Icons.jsx';
 import QRScannerModal from './components/shared/QRScannerModal.jsx';
 import ScanConfirmModal from './components/shared/ScanConfirmModal.jsx';
@@ -216,7 +218,9 @@ export default function App() {
 
       const p = await getOrCreateProfessorProfile(u);
       setProfile(p);
-      if (p?.approved) {
+      if (p?.disabled === true) {
+        setScreen('disabled');
+      } else if (p?.approved) {
         setScreen('dashboard');
         setActiveTab('schedules');
       } else {
@@ -228,11 +232,13 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  const isProfessorActive = !!authUser && !isAdmin && profile?.approved === true && profile?.disabled !== true;
+
   useEffect(() => {
     let unsub = null;
     if (isAdmin) {
       unsub = watchSchedulesPublic(setSchedules);
-    } else if (authUser && profile?.approved) {
+    } else if (isProfessorActive) {
       unsub = watchSchedulesForProfessor(authUser.uid, setSchedules);
     } else {
       unsub = watchSchedulesPublic(setSchedules);
@@ -240,7 +246,7 @@ export default function App() {
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [authUser, isAdmin, profile?.approved]);
+  }, [authUser, isAdmin, profile?.approved, profile?.disabled]);
 
   useEffect(() => {
     // Always watch allUsers so everyone can see professors (for reporting)
@@ -279,7 +285,7 @@ export default function App() {
   }, [isAdmin, authUser]);
 
   useEffect(() => {
-    if (!authUser || isAdmin || !profile?.approved) {
+    if (!isProfessorActive) {
       setTimeLogs([]);
       return undefined;
     }
@@ -287,7 +293,7 @@ export default function App() {
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [authUser, isAdmin, profile?.approved]);
+  }, [authUser, isAdmin, profile?.approved, profile?.disabled]);
 
   useEffect(() => {
     if (!authUser || !isAdmin) {
@@ -596,6 +602,16 @@ export default function App() {
     }
   };
 
+  const adminDisableProfessor = async (professorUid) => {
+    if (!authUser) return;
+    try {
+      await disableProfessorAsAdmin(professorUid, authUser.uid);
+      alert('Professor disabled.');
+    } catch (err) {
+      alert(err?.message || 'Failed to disable professor');
+    }
+  };
+
   const professorSignUp = async () => {
     if (signUpForm.password !== signUpForm.confirmPassword) {
       setSignUpError('Passwords do not match');
@@ -849,14 +865,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!authUser || isAdmin || !profile?.approved) return;
+    if (!isProfessorActive) return;
     if (scanBusy) return;
     const pending = window.sessionStorage.getItem('pending_timelog');
     if (!pending) return;
     window.sessionStorage.removeItem('pending_timelog');
     handleTimeLogScan(pending);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, isAdmin, profile?.approved]);
+  }, [authUser, isAdmin, profile?.approved, profile?.disabled]);
 
   return (
     <>
@@ -893,6 +909,10 @@ export default function App() {
                 onGoToPublic={() => setScreen('public')}
                 onLogout={onLogout}
               />
+            )}
+
+            {screen === 'disabled' && (
+              <DisabledScreen onGoToPublic={() => setScreen('public')} onLogout={onLogout} />
             )}
 
             {screen === 'login' && (
@@ -935,6 +955,7 @@ export default function App() {
                 createProfForm={createProfForm}
                 onCreateProfFormChange={setCreateProfForm}
                 onCreateProfessor={adminCreateProfessor}
+                onDisableProfessor={adminDisableProfessor}
                 createProfBusy={createProfBusy}
                 createProfError={createProfError}
                 pendingProfessors={pendingProfessors}
