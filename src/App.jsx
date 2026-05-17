@@ -71,7 +71,7 @@ export default function App() {
   const [adminTimeLogs, setAdminTimeLogs] = useState([]);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
-  const [scanConfirm, setScanConfirm] = useState({ open: false, title: '', subtitle: '' });
+  const [scanConfirm, setScanConfirm] = useState({ open: false, title: '', subtitle: '', variant: 'success' });
   const [clock, setClock] = useState('--:--:--');
   const [today, setToday] = useState('---');
   const [qrOpen, setQrOpen] = useState(false);
@@ -753,7 +753,11 @@ export default function App() {
   const showScanConfirm = (nextType) => {
     const type = String(nextType || '').toUpperCase();
     const title = type ? `Recorded: ${type}` : 'Recorded';
-    setScanConfirm({ open: true, title, subtitle: '' });
+    setScanConfirm({ open: true, title, subtitle: '', variant: 'success' });
+  };
+
+  const showScanError = (subtitle, title = 'Not allowed') => {
+    setScanConfirm({ open: true, title, subtitle: String(subtitle || ''), variant: 'error' });
   };
 
   const getManilaIsoDate = (d = new Date()) =>
@@ -801,13 +805,13 @@ export default function App() {
           }
         : null;
       if (!scheduleId) {
-        alert('No active schedule right now.');
+        showScanError('No active schedule right now.');
         return;
       }
       const todayIso = getManilaIsoDate(now);
       const next = pickNextTimeLogTypeForSchedule(current, todayIso);
       if (!next.ok) {
-        alert(next.reason || 'Time log is not allowed for this schedule today.');
+        showScanError(next.reason || 'Time log is not allowed for this schedule today.');
         return;
       }
       const nextType = next.type;
@@ -872,13 +876,13 @@ export default function App() {
         }
       : null;
     if (!scheduleId) {
-      alert('No active schedule right now.');
+      showScanError('No active schedule right now.');
       return;
     }
 
     const next = pickNextTimeLogTypeForSchedule(current, todayIso);
     if (!next.ok) {
-      alert(next.reason || 'Time log is not allowed for this schedule today.');
+      showScanError(next.reason || 'Time log is not allowed for this schedule today.');
       return;
     }
     const nextType = next.type;
@@ -1050,7 +1054,8 @@ export default function App() {
             isOpen={!!scanConfirm.open}
             title={scanConfirm.title}
             subtitle={scanConfirm.subtitle}
-            onClose={() => setScanConfirm({ open: false, title: '', subtitle: '' })}
+            variant={scanConfirm.variant}
+            onClose={() => setScanConfirm({ open: false, title: '', subtitle: '', variant: 'success' })}
             durationMs={2000}
           />
         </>

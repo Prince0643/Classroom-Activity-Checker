@@ -65,6 +65,23 @@ function isScheduleOccupied(schedule) {
   return tapInAt > 0 && (tapOutAt <= 0 || tapOutAt < tapInAt);
 }
 
+function getManilaIsoDate(d = new Date()) {
+  try {
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD
+  } catch {
+    return d.toISOString().slice(0, 10);
+  }
+}
+
+function isScheduleCompletedToday(schedule, todayIso) {
+  const tapInAt = Number(schedule?.live?.tapInAt || 0) || 0;
+  const tapOutAt = Number(schedule?.live?.tapOutAt || 0) || 0;
+  if (!(tapInAt > 0 && tapOutAt > 0 && tapOutAt >= tapInAt)) return false;
+  const liveDate = String(schedule?.live?.logDate || '').trim();
+  if (liveDate) return liveDate === todayIso;
+  return getManilaIsoDate(new Date(tapOutAt)) === todayIso;
+}
+
 function toSearchText(value) {
   return String(value || '')
     .trim()
@@ -74,7 +91,10 @@ function toSearchText(value) {
 function buildRowSearchText(row) {
   const c = row?.classroom;
   const s = row?.schedule;
-  const statusText = s ? (isScheduleOccupied(s) ? 'occupied' : 'scheduled') : 'available';
+  const todayIso = getManilaIsoDate(new Date());
+  const statusText = s
+    ? (isScheduleCompletedToday(s, todayIso) ? 'completed' : (isScheduleOccupied(s) ? 'occupied' : 'scheduled'))
+    : 'available';
   const timeText = s ? formatDayTimeRange(s.fixed?.day, s.fixed?.timeStart, s.fixed?.timeEnd) : '';
   return [
     c?.roomNumber,
@@ -97,6 +117,7 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
   const [selectedRowIdx, setSelectedRowIdx] = useState(0);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const todayIso = getManilaIsoDate(new Date());
   const slidesRef = useRef([]);
   const selectedRowElRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -491,9 +512,13 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
                         </div>
                         <div>
                           {s ? (
-                            <span className={`tag ${isScheduleOccupied(s) ? 'tag--progress' : 'tag--scheduled'}`}>
-                              {isScheduleOccupied(s) ? 'Occupied' : 'Scheduled'}
-                            </span>
+                            isScheduleCompletedToday(s, todayIso) ? (
+                              <span className="tag tag--completed">Completed</span>
+                            ) : (
+                              <span className={`tag ${isScheduleOccupied(s) ? 'tag--progress' : 'tag--scheduled'}`}>
+                                {isScheduleOccupied(s) ? 'Occupied' : 'Scheduled'}
+                              </span>
+                            )
                           ) : (
                             <span className="cell--muted">Available</span>
                           )}
