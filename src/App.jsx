@@ -457,6 +457,23 @@ export default function App() {
     return null;
   };
 
+  const findProfessorScheduleConflict = ({ professorUid, day, start, end, ignoreId = null }) => {
+    const uid = String(professorUid || '').trim();
+    const d = String(day || '').trim();
+    if (!uid || !d || start == null || end == null) return null;
+
+    for (const s of schedules || []) {
+      if (!s || (ignoreId && String(s.id) === String(ignoreId))) continue;
+      if (String(s.professorUid || '').trim() !== uid) continue;
+      if (String(s.fixed?.day || '').trim() !== d) continue;
+      const ss = timeToMinutes24(s.fixed?.timeStart);
+      const ee = timeToMinutes24(s.fixed?.timeEnd);
+      if (ss == null || ee == null) continue;
+      if (start < ee && ss < end) return s;
+    }
+    return null;
+  };
+
   const onLogout = async () => {
     await logout();
   };
@@ -484,8 +501,9 @@ export default function App() {
     const day = adminScheduleForm.day;
     const start = timeToMinutes24(adminScheduleForm.timeStart);
     const end = timeToMinutes24(adminScheduleForm.timeEnd);
+    const professorUid = adminScheduleForm.professorUid.trim();
 
-    if (!adminScheduleForm.professorUid.trim()) {
+    if (!professorUid) {
       alert('Please select a professor.');
       return;
     }
@@ -504,9 +522,22 @@ export default function App() {
 
     const conflict = findScheduleConflict({ building, classroom, day, start, end });
     if (conflict) {
-      alert(
-        `Schedule conflict for ${building} • Room ${classroom} on ${day}.\n` +
-          `Conflicts with: ${conflict.fixed?.subject || '(no subject)'} (${conflict.fixed?.timeStart || ''}–${conflict.fixed?.timeEnd || ''}).`
+      showScanError(
+        `Schedule conflict for ${building} • Room ${classroom} on ${day}. ` +
+          `Conflicts with: ${conflict.fixed?.subject || '(no subject)'} (${conflict.fixed?.timeStart || ''}–${conflict.fixed?.timeEnd || ''}).`,
+        'Schedule conflict'
+      );
+      return;
+    }
+
+    const profConflict = findProfessorScheduleConflict({ professorUid, day, start, end });
+    if (profConflict) {
+      const cb = String(profConflict.fixed?.building || '').trim();
+      const cc = String(profConflict.fixed?.classroom || '').trim();
+      showScanError(
+        `Professor has a conflicting schedule on ${day}. ` +
+          `Conflicts with: ${cb}${cb && cc ? ' • ' : ''}${cc ? `Room ${cc}` : ''} — ${profConflict.fixed?.subject || '(no subject)'} (${profConflict.fixed?.timeStart || ''}–${profConflict.fixed?.timeEnd || ''}).`,
+        'Schedule conflict'
       );
       return;
     }
@@ -514,7 +545,7 @@ export default function App() {
     setAdminCreateBusy(true);
     try {
       await createSchedule({
-        professorUid: adminScheduleForm.professorUid.trim(),
+        professorUid,
         professorName: adminScheduleForm.professorName.trim(),
         employeeId: adminScheduleForm.employeeId,
         classroom,
