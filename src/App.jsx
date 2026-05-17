@@ -756,6 +756,20 @@ export default function App() {
     setScanConfirm({ open: true, title, subtitle: '' });
   };
 
+  const getManilaIsoDate = (d = new Date()) =>
+    d.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD
+
+  const pickNextTimeLogTypeForSchedule = (schedule, todayIso) => {
+    const live = schedule?.live || {};
+    const logDate = String(live?.logDate || '').trim();
+    const tapInAt = Number(live?.tapInAt || 0) || 0;
+    const tapOutAt = Number(live?.tapOutAt || 0) || 0;
+
+    if (logDate === todayIso && tapOutAt > 0) return { ok: false, reason: 'Already timed out for this schedule today.' };
+    if (logDate === todayIso && tapInAt > 0 && (tapOutAt <= 0 || tapOutAt < tapInAt)) return { ok: true, type: 'OUT' };
+    return { ok: true, type: 'IN' };
+  };
+
   const handleTimeLogScan = async (raw) => {
     if (scanBusy) return;
     setScanBusy(true);
@@ -772,9 +786,6 @@ export default function App() {
         return;
       }
       const uid = String(payload.uid);
-      const key = `public_last_type_${uid}`;
-      const lastType = String(window.localStorage.getItem(key) || '').toUpperCase();
-      const nextType = lastType === 'IN' ? 'OUT' : 'IN';
       const now = new Date();
       const profSchedules = (schedules || []).filter((s) => String(s?.professorUid || '') === uid);
       const current = findCurrentScheduleForProfessor(profSchedules, now);
@@ -789,6 +800,17 @@ export default function App() {
             timeEnd: current.fixed?.timeEnd || '',
           }
         : null;
+      if (!scheduleId) {
+        alert('No active schedule right now.');
+        return;
+      }
+      const todayIso = getManilaIsoDate(now);
+      const next = pickNextTimeLogTypeForSchedule(current, todayIso);
+      if (!next.ok) {
+        alert(next.reason || 'Time log is not allowed for this schedule today.');
+        return;
+      }
+      const nextType = next.type;
       try {
         const ts = Date.now();
         await createTimeLog({
@@ -803,14 +825,24 @@ export default function App() {
           scheduleDetails,
           status: 'on_time',
         });
-        if (scheduleId) {
-          const livePatch =
-            nextType === 'IN'
-              ? { tapInAt: ts, status: 'In Progress', updatedAt: ts, qrSecret: String(payload.secret || '') }
-              : { tapOutAt: ts, status: 'Completed', updatedAt: ts, qrSecret: String(payload.secret || '') };
-          await dbUpdate(dbRef(db, `schedules/${scheduleId}/live`), livePatch);
-        }
-        window.localStorage.setItem(key, nextType);
+        const livePatch =
+          nextType === 'IN'
+            ? {
+                tapInAt: ts,
+                tapOutAt: null,
+                status: 'In Progress',
+                updatedAt: ts,
+                logDate: todayIso,
+                qrSecret: String(payload.secret || ''),
+              }
+            : {
+                tapOutAt: ts,
+                status: 'Completed',
+                updatedAt: ts,
+                logDate: todayIso,
+                qrSecret: String(payload.secret || ''),
+              };
+        await dbUpdate(dbRef(db, `schedules/${scheduleId}/live`), livePatch);
         showScanConfirm(nextType);
         setQrScannerOpen(false);
       } catch (err) {
@@ -825,11 +857,9 @@ export default function App() {
       return;
     }
 
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const last = (timeLogs || []).find((l) => String(l.date || '') === todayIso) || null;
-    const nextType = last?.type === 'IN' ? 'OUT' : 'IN';
-
-    const current = findCurrentScheduleForProfessor(schedules, new Date());
+    const now = new Date();
+    const todayIso = getManilaIsoDate(now);
+    const current = findCurrentScheduleForProfessor(schedules, now);
     const scheduleId = current?.id || null;
     const scheduleDetails = current
       ? {
@@ -841,8 +871,20 @@ export default function App() {
           timeEnd: current.fixed?.timeEnd || '',
         }
       : null;
+    if (!scheduleId) {
+      alert('No active schedule right now.');
+      return;
+    }
+
+    const next = pickNextTimeLogTypeForSchedule(current, todayIso);
+    if (!next.ok) {
+      alert(next.reason || 'Time log is not allowed for this schedule today.');
+      return;
+    }
+    const nextType = next.type;
 
     try {
+      const ts = Date.now();
       await createTimeLog({
         professorUid: authUser.uid,
         professorName: profile?.displayName || authUser.email || '',
@@ -854,6 +896,11 @@ export default function App() {
         scheduleDetails,
         status: 'on_time',
       });
+      const livePatch =
+        nextType === 'IN'
+          ? { tapInAt: ts, tapOutAt: null, status: 'In Progress', updatedAt: ts, logDate: todayIso }
+          : { tapOutAt: ts, status: 'Completed', updatedAt: ts, logDate: todayIso };
+      await dbUpdate(dbRef(db, `schedules/${scheduleId}/live`), livePatch);
       showScanConfirm(nextType);
       setQrScannerOpen(false);
     } catch (err) {

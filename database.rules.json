@@ -72,6 +72,9 @@
             "updatedAt": {
               ".validate": "newData.val() == null || newData.isNumber()"
             },
+            "logDate": {
+              ".validate": "newData.val() == null || newData.isString()"
+            },
             "qrSecret": {
               ".validate": "newData.val() == null || newData.isString()"
             }

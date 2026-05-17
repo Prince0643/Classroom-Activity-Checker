@@ -92,3 +92,10 @@ export const ReportIcon = () => (
     <path d="M10.5 3.5l-7 4A2 2 0 0 0 2 9.3v5.4a2 2 0 0 0 1.5 1.8l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1.5-1.8V9.3a2 2 0 0 0-1.5-1.8l-7-4a2 2 0 0 0-2 0Z" stroke="currentColor" strokeWidth="1.6" />
   </svg>
 );
+
+export const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);

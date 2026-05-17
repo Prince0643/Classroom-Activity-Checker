@@ -1,4 +1,4 @@
-import { ClockIcon } from '../shared/Icons.jsx';
+import { ClockIcon, SearchIcon } from '../shared/Icons.jsx';
 import { formatDayTimeRange } from '../../utils/helpers.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -65,11 +65,42 @@ function isScheduleOccupied(schedule) {
   return tapInAt > 0 && (tapOutAt <= 0 || tapOutAt < tapInAt);
 }
 
+function toSearchText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
+
+function buildRowSearchText(row) {
+  const c = row?.classroom;
+  const s = row?.schedule;
+  const statusText = s ? (isScheduleOccupied(s) ? 'occupied' : 'scheduled') : 'available';
+  const timeText = s ? formatDayTimeRange(s.fixed?.day, s.fixed?.timeStart, s.fixed?.timeEnd) : '';
+  return [
+    c?.roomNumber,
+    c?.floor ? `floor ${c.floor}` : '',
+    s?.fixed?.subject,
+    s?.fixed?.professorName,
+    s?.fixed?.day,
+    s?.fixed?.timeStart,
+    s?.fixed?.timeEnd,
+    timeText,
+    statusText,
+  ]
+    .map(toSearchText)
+    .filter(Boolean)
+    .join(' ');
+}
+
 export default function PublicScreen({ clock, today, schedules, buildings, classrooms, onScanQr }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [selectedRowIdx, setSelectedRowIdx] = useState(0);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const slidesRef = useRef([]);
   const selectedRowElRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const searchToggleBtnRef = useRef(null);
 
   const slides = useMemo(() => {
     const buildingList = Array.isArray(buildings) ? buildings : [];
@@ -254,7 +285,67 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
   }, [activeIdx]);
 
   const activeSlide = slides[activeIdx] || null;
-  const selectedRow = activeSlide?.classrooms?.length ? activeSlide.classrooms[selectedRowIdx] : null;
+  const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
+  const displayedRows = useMemo(() => {
+    const rows = activeSlide?.classrooms || [];
+    if (!rows.length) return [];
+    if (!normalizedQuery) return rows;
+    return rows.filter((row) => buildRowSearchText(row).includes(normalizedQuery));
+  }, [activeSlide, normalizedQuery]);
+
+  useEffect(() => {
+    setSelectedRowIdx(0);
+  }, [activeIdx, normalizedQuery]);
+
+  useEffect(() => {
+    if (!displayedRows.length) {
+      setSelectedRowIdx(0);
+      return;
+    }
+    if (selectedRowIdx > displayedRows.length - 1) setSelectedRowIdx(displayedRows.length - 1);
+  }, [displayedRows.length, selectedRowIdx]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (isModalOpen()) return;
+      if (e.key === 'Escape') {
+        if (!isSearchExpanded) return;
+        e.preventDefault();
+        setIsSearchExpanded(false);
+        return;
+      }
+      if (String(e.key || '').toLowerCase() !== 'o') return;
+      if (shouldIgnoreArrowKeyEvent(e.target)) return;
+      e.preventDefault();
+      setIsSearchExpanded((v) => !v);
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [isSearchExpanded]);
+
+  useEffect(() => {
+    if (!isSearchExpanded) {
+      window.setTimeout(() => {
+        try {
+          searchToggleBtnRef.current?.focus?.();
+        } catch {
+          // ignore
+        }
+      }, 0);
+      return;
+    }
+    window.setTimeout(() => {
+      try {
+        searchInputRef.current?.focus?.();
+      } catch {
+        // ignore
+      }
+    }, 0);
+  }, [isSearchExpanded]);
+
+  const selectedRow = displayedRows.length ? displayedRows[selectedRowIdx] : null;
+  const totalRowsCount = activeSlide?.classrooms?.length || 0;
+  const filteredRowsCount = displayedRows.length;
 
   return (
     <section className="screen">
@@ -292,10 +383,49 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
               <div className="carousel__titleMain">{activeSlide?.title || 'Buildings'}</div>
               <div className="carousel__titleSub">
                 {activeSlide?.meta ? `${activeSlide.meta} • ` : ''}
-                {activeSlide ? `${(activeSlide.classrooms || []).length} classroom${(activeSlide.classrooms || []).length === 1 ? '' : 's'}` : ''}
+                {activeSlide
+                  ? (normalizedQuery
+                    ? `${filteredRowsCount} of ${totalRowsCount} classroom${totalRowsCount === 1 ? '' : 's'}`
+                    : `${totalRowsCount} classroom${totalRowsCount === 1 ? '' : 's'}`
+                  )
+                  : ''}
               </div>
             </div>
             <div className="carousel__nav" aria-label="Building navigation">
+              <div className={`carouselSearch ${isSearchExpanded ? 'carouselSearch--expanded' : ''}`} aria-label="Search classrooms">
+                <button
+                  ref={searchToggleBtnRef}
+                  className="iconbtn iconbtn--dark carouselSearch__toggle"
+                  type="button"
+                  aria-label={isSearchExpanded ? 'Collapse search' : 'Expand search'}
+                  aria-expanded={isSearchExpanded ? 'true' : 'false'}
+                  onClick={() => setIsSearchExpanded((v) => !v)}
+                  disabled={!activeSlide || !totalRowsCount}
+                  title="Search (press O)"
+                >
+                  <SearchIcon />
+                </button>
+                <div className="carouselSearch__field" aria-hidden={isSearchExpanded ? 'false' : 'true'}>
+                  <input
+                    ref={searchInputRef}
+                    className="input carouselSearch__input"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search…"
+                    aria-label="Search query"
+                    tabIndex={isSearchExpanded ? 0 : -1}
+                  />
+                  <button
+                    className="btn btn--light btn--sm carouselSearch__clear"
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    disabled={!searchQuery.trim()}
+                    tabIndex={isSearchExpanded ? 0 : -1}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
               <button
                 className="btn btn--light btn--sm"
                 type="button"
@@ -326,9 +456,9 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
               <div>Status</div>
             </div>
             <div className="table__body table__body--scroll" aria-label="Classrooms (use ↑/↓ to select)">
-              {activeSlide?.classrooms?.length ? (
+              {displayedRows.length ? (
                 <div>
-                  {activeSlide.classrooms.map((row, i) => {
+                  {displayedRows.map((row, i) => {
                     const c = row?.classroom;
                     const s = row?.schedule;
                     const isSelected = i === selectedRowIdx;
@@ -379,8 +509,8 @@ export default function PublicScreen({ clock, today, schedules, buildings, class
                 </div>
               ) : (
                 <div className="emptyState">
-                  <div className="emptyState__title">No classrooms in this building.</div>
-                  <div className="emptyState__sub">Use ← / → to switch buildings.</div>
+                  <div className="emptyState__title">{normalizedQuery ? 'No matches found.' : 'No classrooms in this building.'}</div>
+                  <div className="emptyState__sub">{normalizedQuery ? `Try a different search (e.g. room, subject, professor, or “available”).` : 'Use ← / → to switch buildings.'}</div>
                 </div>
               )}
             </div>

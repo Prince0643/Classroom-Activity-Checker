@@ -516,6 +516,34 @@ body{
 .modal__body{padding:20px;display:grid;place-items:center}
 .modal__body img{width:min(420px,80vw);height:auto}
 
+.carouselSearch{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.carouselSearch__field{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  max-width:0;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition:max-width .18s ease, opacity .12s ease;
+}
+.carouselSearch--expanded .carouselSearch__field{
+  max-width:320px;
+  opacity:1;
+  pointer-events:auto;
+}
+.carouselSearch__input{
+  width:220px;
+  height:36px;
+  padding:0 12px;
+  border-radius:12px;
+}
+.carouselSearch__clear{white-space:nowrap}
+
 .confirmModal{z-index:55}
 .confirmModal__backdrop{background:rgba(2,6,23,.34);backdrop-filter:blur(4px)}
 .confirmModal__panel{
